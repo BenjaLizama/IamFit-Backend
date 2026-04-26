@@ -1,0 +1,7 @@
+app:
+  cleanup:
+    session:
+      cron: "0 0 * * * ?"
+    account:
+      cron: "0 0 3 * * ?"
+      grace-period-days: 30
