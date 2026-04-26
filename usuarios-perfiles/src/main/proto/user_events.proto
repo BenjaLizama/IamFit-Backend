@@ -1,4 +1,26 @@
 syntax = "proto3";
 
+// Esta opción es clave para que genere clases separadas y no un solo archivo gigante
 option java_multiple_files = true;
-option java_package = "com.iamfit.usuarios_perfiles.grpc";
+// El paquete debe ser genérico o coincidir con donde quieras que se generen las clases
+option java_package = "com.iamfit.grpc.common";
+
+package user;
+
+service UserProfileGrpcService {
+  rpc OnUserCreated(UserCreatedEvent) returns (UserCreatedResponse);
+}
+
+message UserCreatedEvent {
+  string credential_id = 1;
+  string nickname = 2;
+  int32 age = 3;
+  int32 height = 4;
+  int32 weight = 5;
+  string sex = 6;
+}
+
+message UserCreatedResponse {
+  bool success = 1;
+  string message = 2;
+}
