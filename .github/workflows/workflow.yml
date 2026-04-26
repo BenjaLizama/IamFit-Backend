@@ -1,0 +1,50 @@
+name: "Calidad de código"
+
+on:
+  push:
+    branches: ["autenticacion-seguridad", "usuarios-perfiles"]
+    paths:
+      - 'autenticacion-seguridad/**'
+      - 'usuarios-perfiles/**'
+  pull_request:
+    branches: ["autenticacion-seguridad", "usuarios-perfiles"]
+    paths:
+      - 'autenticacion-seguridad/**'
+      - 'usuarios-perfiles/**'
+
+jobs:
+  build-and-test:
+    name: "Pipeline de Calidad"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [autenticacion-seguridad, usuarios-perfiles]
+
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Setup JDK 21"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: "Compilar y Generar gRPC"
+        run: mvn -f ${{ matrix.service }}/pom.xml compile
+
+      - name: "Analisis de Estilo (Checkstyle)"
+        run: mvn -f ${{ matrix.service }}/pom.xml checkstyle:check
+
+      - name: "Ejecutar Tests y Cobertura"
+        run: mvn -f ${{ matrix.service }}/pom.xml clean test jacoco:report
+
+      - name: "Subir Reporte de Cobertura"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-jacoco-${{ matrix.service }}
+          path: ${{ matrix.service }}/target/site/jacoco/
