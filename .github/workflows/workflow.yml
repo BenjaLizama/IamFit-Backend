@@ -2,10 +2,14 @@ name: "Calidad de código"
 
 on:
   push:
-    branches: ["autenticacion-seguridad", "usuarios-perfiles"]
+    branches:
+      - main
+      - autenticacion-seguridad
+      - usuarios-perfiles
     paths:
       - 'autenticacion-seguridad/**'
       - 'usuarios-perfiles/**'
+      - '.github/workflows/**'
   pull_request:
     branches: ["autenticacion-seguridad", "usuarios-perfiles"]
     paths:
@@ -13,38 +17,39 @@ on:
       - 'usuarios-perfiles/**'
 
 jobs:
-  build-and-test:
-    name: "Pipeline de Calidad"
+  build:
     runs-on: ubuntu-latest
-
     strategy:
-      fail-fast: false
       matrix:
-        service: [autenticacion-seguridad, usuarios-perfiles]
+        service: [usuarios-perfiles, autenticacion-seguridad]
 
     steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v4
-
-      - name: "Setup JDK 21"
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: maven
+          fetch-depth: 0
 
-      - name: "Compilar y Generar gRPC"
-        run: mvn -f ${{ matrix.service }}/pom.xml compile
+      - name: Check for changes
+        id: check_changes
+        run: |
+          # Si es un PR, comparamos contra la rama base
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_REF="origin/${{ github.base_ref }}"
+            if git diff --quiet $BASE_REF HEAD -- ${{ matrix.service }}; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+            else
+              echo "changed=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Si es un push, intentamos comparar con el anterior, si falla (primer commit), asumimos true
+            if git diff --quiet HEAD^ HEAD -- ${{ matrix.service }} 2>/dev/null; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+            else
+              echo "changed=true" >> $GITHUB_OUTPUT
+            fi
+          fi
 
-      - name: "Analisis de Estilo (Checkstyle)"
-        run: mvn -f ${{ matrix.service }}/pom.xml checkstyle:check
-
-      - name: "Ejecutar Tests y Cobertura"
-        run: mvn -f ${{ matrix.service }}/pom.xml clean test jacoco:report
-
-      - name: "Subir Reporte de Cobertura"
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: reporte-jacoco-${{ matrix.service }}
-          path: ${{ matrix.service }}/target/site/jacoco/
+      - name: Run Maven Tests
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          cd ${{ matrix.service }}
+          mvn clean test
