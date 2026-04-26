@@ -9,6 +9,8 @@ spring:
   grpc:
     server:
       port: 9090
+      http2:
+        enabled: true
 
   application:
     name: usuarios-perfiles
