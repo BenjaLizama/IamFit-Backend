@@ -1,0 +1,27 @@
+server:
+  port: ${DEV_PORT}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{userIp}] %-5level %logger{36} - %msg%n"
+
+spring:
+  grpc:
+    server:
+      port: 9090
+
+  application:
+    name: usuarios-perfiles
+
+  profiles:
+    active: dev
+
+  session:
+    store-type: jdbc
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
