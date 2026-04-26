@@ -6,6 +6,10 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%X{userIp}] %-5level %logger{36} - %msg%n"
 
 spring:
+  grpc:
+    server:
+      port: 9090
+
   application:
     name: usuarios-perfiles
 

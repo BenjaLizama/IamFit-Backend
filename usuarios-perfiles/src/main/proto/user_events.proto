@@ -1,8 +1,6 @@
 syntax = "proto3";
 
-// Esta opción es clave para que genere clases separadas y no un solo archivo gigante
 option java_multiple_files = true;
-// El paquete debe ser genérico o coincidir con donde quieras que se generen las clases
 option java_package = "com.iamfit.grpc.common";
 
 package user;
