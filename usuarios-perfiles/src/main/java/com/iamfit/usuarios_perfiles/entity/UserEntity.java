@@ -36,7 +36,7 @@ public class UserEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<WeightHistory> weightHistory = new ArrayList<>();
+    private List<WeightHistoryEntity> weightHistory = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -45,7 +45,7 @@ public class UserEntity extends BaseEntity {
     // Método de ayuda
     public void updateWeight(Integer newWeight) {
         this.weight = newWeight;
-        this.weightHistory.add(WeightHistory.builder()
+        this.weightHistory.add(WeightHistoryEntity.builder()
                 .weight(newWeight)
                 .user(this)
                 .build());

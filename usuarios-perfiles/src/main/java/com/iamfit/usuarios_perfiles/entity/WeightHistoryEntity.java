@@ -16,7 +16,7 @@ import lombok.experimental.SuperBuilder;
         @Index(name = "idx_weight_user_id", columnList = "user_id"),
         @Index(name = "idx_user_createdAt", columnList = "user_id, createdAt")
 })
-public class WeightHistory extends BaseEntity {
+public class WeightHistoryEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
