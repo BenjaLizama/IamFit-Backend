@@ -10,6 +10,11 @@ public record RegisterWrapper(
         @Valid
         RegisterRequest register,
 
+        @JsonProperty("UserProfile")
+        @NotNull(message = "Los datos del perfil de usuario son obligatorios.")
+        @Valid
+        UserProfileRequest userProfile,
+
         @JsonProperty("session")
         @NotNull(message = "Los datos de sesión son obligatorios.")
         @Valid

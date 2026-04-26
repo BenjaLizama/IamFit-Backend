@@ -1,5 +1,6 @@
 package com.iamfit.autenticacion_seguridad.service.impl;
 
+import com.iamfit.autenticacion_seguridad.client.UserProfileClient;
 import com.iamfit.autenticacion_seguridad.dto.AuthResponse;
 import com.iamfit.autenticacion_seguridad.dto.LoginWrapper;
 import com.iamfit.autenticacion_seguridad.dto.RegisterWrapper;
@@ -14,11 +15,13 @@ import com.iamfit.autenticacion_seguridad.security.SecurityCredential;
 import com.iamfit.autenticacion_seguridad.service.IAuthService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService implements IAuthService {
@@ -29,6 +32,7 @@ public class AuthService implements IAuthService {
     private final JwtService jwtService;
     private final AuthStrategyManager authStrategyManager;
     private final SessionService sessionService;
+    private final UserProfileClient userProfileClient;
 
     /**
      * Inicio de sesión
@@ -54,8 +58,10 @@ public class AuthService implements IAuthService {
      */
     @Override
     @Transactional
-    public AuthResponse register(RegisterWrapper registerWrapper) {
-        if (credentialRepository.existsByEmail(registerWrapper.register().email())) {
+    public AuthResponse register(RegisterWrapper request) {
+        log.info("Iniciando proceso de registro para el email: {}", request.register().email());
+
+        if (credentialRepository.existsByEmail(request.register().email())) {
             throw new EmailAlreadyExistsException("El correo electrónico ya está registrado");
         }
 
@@ -63,18 +69,29 @@ public class AuthService implements IAuthService {
                 .orElseThrow(() -> new RoleNotFoundException("Error crítico: ROLE_USER no existe."));
 
         CredentialEntity credential = new CredentialEntity();
-        credential.setEmail(registerWrapper.register().email());
-        credential.setPassword(passwordEncoder.encode(registerWrapper.register().password()));
+        credential.setEmail(request.register().email());
+        credential.setPassword(passwordEncoder.encode(request.register().password()));
         credential.setIsActive(true);
         credential.setRoleList(Set.of(defaultRole));
 
         CredentialEntity savedCredential = credentialRepository.save(credential);
+
+        // --- Integración gRPC ---
+        userProfileClient.sendUserCreatedEvent(
+                savedCredential.getId().toString(),
+                request.userProfile().nickname(),
+                request.userProfile().age(),
+                request.userProfile().weight(),
+                request.userProfile().height(),
+                request.userProfile().sex()
+        );
+
         SecurityCredential userDetails = new SecurityCredential(savedCredential);
 
         String accessToken = jwtService.generateToken(userDetails);
 
         // Crear nueva sesión
-        SessionResponse session = sessionService.createSession(savedCredential.getId(), registerWrapper.session());
+        SessionResponse session = sessionService.createSession(savedCredential.getId(), request.session());
 
         return new AuthResponse(accessToken, session.rawRefreshToken(), session.expiryDate());
     }
