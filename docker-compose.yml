@@ -36,15 +36,18 @@ services:
     build: ./usuarios-perfiles
     container_name: usuarios-perfiles-app
     ports:
+      - "8081:8080"
       - "50052:50051"
     environment:
       - SPRING_PROFILE_ACTIVE=prod
       - SPRING_DATASOURCE_URL=jdbc:postgresql://usuarios-perfiles-db:5432/db_usuarios_perfiles
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=pass
+      - SPRING_REDIS_HOST=cache-redis
     entrypoint: ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
     depends_on:
       - usuarios-perfiles-db
+      - cache-redis
 
   usuarios-perfiles-db:
     image: postgres:16-alpine
