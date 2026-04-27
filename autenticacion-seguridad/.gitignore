@@ -20,13 +20,6 @@ target/
 *.iml
 *.ipr
 
-#
-src/main/resources/application-dev.yaml
-
-## test
-src/test/resources/application-test.properties
-src/main/resources/application-test.properties
-
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
