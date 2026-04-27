@@ -15,7 +15,9 @@ public class UserProfileClient {
     private final UserProfileGrpcServiceGrpc.UserProfileGrpcServiceBlockingStub stub;
 
     public UserProfileClient(GrpcChannelFactory channels) {
-        this.stub = UserProfileGrpcServiceGrpc.newBlockingStub(channels.createChannel("usuarios-perfiles-service"));
+        this.stub = UserProfileGrpcServiceGrpc.newBlockingStub(
+                channels.createChannel("usuarios-perfiles-service")
+        );
     }
 
     @PostConstruct
