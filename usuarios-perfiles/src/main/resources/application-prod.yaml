@@ -29,9 +29,8 @@ spring:
         jdbc:
           time_zone: UTC
 
-# Configuración interna del servidor gRPC
-grpc:
-  server:
-    port: 50051 # Asegurar que el ms de autenticacion usa el mismo
-    http2:
-      enabled: true
+  grpc:
+    server:
+      port: 50051
+      http2:
+        enabled: true
