@@ -15,12 +15,12 @@ public class UserProfileClient {
     private final UserProfileGrpcServiceGrpc.UserProfileGrpcServiceBlockingStub stub;
 
     public UserProfileClient(GrpcChannelFactory channels) {
-        this.stub = UserProfileGrpcServiceGrpc.newBlockingStub(channels.createChannel("user-profile-service"));
+        this.stub = UserProfileGrpcServiceGrpc.newBlockingStub(channels.createChannel("usuarios-perfiles-service"));
     }
 
     @PostConstruct
     public void init() {
-        log.info("=== Cliente gRPC inicializado correctamente para el canal: user-profile-service ===");
+        log.info("=== Cliente gRPC inicializado correctamente para el canal: usuarios-perfiles-service ===");
     }
 
     public void sendUserCreatedEvent(String credentialId, String nickname, Integer age , Integer weight, Integer height, String sex) {
