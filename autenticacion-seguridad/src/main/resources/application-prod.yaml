@@ -19,9 +19,10 @@ spring:
   # CONFIGURACIÓN DEL CLIENTE gRPC
   grpc:
     client:
-      usuarios-perfiles-service:
-        address: 'static://usuarios-perfiles-app:50051'
-        negotiation-type: plaintext
+      named-channels:
+        usuarios-perfiles-service:
+          address: 'static://usuarios-perfiles-app:50051'
+          negotiation-type: plaintext
 
 RSA_PRIVATE: ${RSA_PRIVATE}
 RSA_PUBLIC: ${RSA_PUBLIC}
