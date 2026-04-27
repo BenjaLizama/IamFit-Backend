@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # --- 1. MICROSERVICIO DE AUTENTICACIÓN Y SEGURIDAD ---
+  autenticacion-seguridad-service:
+    build: ./autenticacion-seguridad
+    container_name: autenticacion-seguridad-app
+    ports:
+      - "50051:50051"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://autenticacion-seguridad-db:5432/db_autenticacion_seguridad
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=pass
+      - SPRING_REDIS_HOST=cache-redis
+    depends_on:
+      - autenticacion-seguridad-db
+      - cache-redis
+
+  autenticacion-seguridad-db:
+    image: postgres:16-alpine
+    container_name: autenticacion-seguridad-db
+    environment:
+      - POSTGRES_DB=db_autenticacion_seguridad
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+    volumes:
+      - autenticacion_seguridad_data:/var/lib/postgresql/data
+
+  # --- 2. MICROSERVICIO DE USUARIOS Y PERFILES ---
+  usuarios-perfiles-service:
+    build: ./usuarios-perfiles
+    container_name: usuarios-perfiles-app
+    ports:
+      - "50052:50051"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://usuarios-perfiles-db:5432/db_usuarios_perfiles
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=pass
+    depends_on:
+      - usuarios-perfiles-db
+
+  usuarios-perfiles-db:
+    image: postgres:16-alpine
+    container_name: usuarios-perfiles-db
+    environment:
+      - POSTGRES_DB=db_usuarios_perfiles
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+    volumes:
+      - usuarios_perfiles_data:/var/lib/postgresql/data
+
+  # --- INFRAESTRUCTURA COMPARTIDA ---
+  cache-redis:
+    image: redis:7-alpine
+    container_name: cache-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  autenticacion_seguridad_data:
+  usuarios_perfiles_data:
