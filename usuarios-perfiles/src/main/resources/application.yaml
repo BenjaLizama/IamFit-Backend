@@ -1,5 +1,5 @@
 server:
-  port: ${DEV_PORT}
+  port: 8080
 
 logging:
   pattern:
@@ -12,18 +12,6 @@ spring:
       http2:
         enabled: true
 
+
   application:
     name: usuarios-perfiles
-
-  profiles:
-    active: dev
-
-  session:
-    store-type: jdbc
-
-  jpa:
-    open-in-view: false
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: UTC

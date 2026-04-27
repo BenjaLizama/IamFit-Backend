@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: usuarios-perfiles
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  session:
+    store-type: redis
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST}
+      port: 6379
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+
+# Configuración interna del servidor gRPC
+grpc:
+  server:
+    port: 50051 # Asegurar que el ms de autenticacion usa el mismo
+    http2:
+      enabled: true
