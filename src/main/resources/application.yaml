@@ -1,0 +1,46 @@
+server:
+  port: ${DEV_PORT:8081}
+
+spring:
+  application:
+    name: iamfit-ai-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/iamfit_ai_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: iamfit-ai-service
+          location: us-central1
+          chat:
+            options:
+              model: gemini-2.5-flash
+
+        embedding:
+          project-id: iamfit-ai-service
+          location: us-central1
+          options:
+            model: text-embedding-004
+
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768
+        initialize-schema: true
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
