@@ -1,0 +1,57 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/menu-ia
+    username: dev_user
+    password: dev_password
+    driver-class-name: org.postgresql.Driver
+
+  application:
+    name: iamfit-meal-planner
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  ai:
+    google:
+      genai:
+        project-id: "gen-lang-client-0705803122"
+        api-key: "AIzaSyD5BCzv3mIXB1enV_wB1h-QA1BwqxbAhEg"
+        location: us-central1
+        chat:
+          options:
+            model: gemini-2.5-flash
+            safety-settings:
+              - category: HARM_CATEGORY_HARASSMENT
+                threshold: BLOCK_NONE
+              - category: HARM_CATEGORY_HATE_SPEECH
+                threshold: BLOCK_NONE
+        embedding:
+          options:
+            model: text-embedding-004
+          api-key: "AIzaSyD5BCzv3mIXB1enV_wB1h-QA1BwqxbAhEg"
+          location: us-central1
+          project-id: "gen-lang-client-0705803122"
+
+  vectorstore:
+    pgvector:
+      initialize-schema: false
+      table-name: vector_store
+      dimensions: 768
+      distance-type: COSINE_DISTANCE
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.iamfit: DEBUG
+    org.springframework.ai: INFO
