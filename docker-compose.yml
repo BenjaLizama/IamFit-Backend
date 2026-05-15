@@ -1,0 +1,142 @@
+services:
+  # --- 1. MICROSERVICIO DE AUTENTICACIÓN Y SEGURIDAD ---
+  autenticacion-seguridad-service:
+    build: ./autenticacion-seguridad
+    container_name: autenticacion-seguridad-app
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    environment:
+      - SPRING_PROFILE_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://autenticacion-seguridad-db:5432/db_autenticacion_seguridad
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=pass
+      - SPRING_REDIS_HOST=cache-redis
+      - RSA_PRIVATE=${RSA_PRIVATE}
+      - RSA_PUBLIC=${RSA_PUBLIC}
+    entrypoint: ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
+    depends_on:
+      - autenticacion-seguridad-db
+      - cache-redis
+
+  autenticacion-seguridad-db:
+    image: postgres:16-alpine
+    container_name: autenticacion-seguridad-db
+    environment:
+      - POSTGRES_DB=db_autenticacion_seguridad
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+    volumes:
+      - autenticacion_seguridad_data:/var/lib/postgresql/data
+
+  # --- 2. MICROSERVICIO DE USUARIOS Y PERFILES ---
+  usuarios-perfiles-service:
+    build: ./usuarios-perfiles
+    container_name: usuarios-perfiles-app
+    ports:
+      - "8081:8080"
+      - "50052:50051"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://usuarios-perfiles-db:5432/db_usuarios_perfiles
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=pass
+      - SPRING_REDIS_HOST=cache-redis
+      - RSA_PUBLIC=${RSA_PUBLIC}
+    entrypoint: ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
+    depends_on:
+      - usuarios-perfiles-db
+      - cache-redis
+
+  usuarios-perfiles-db:
+    image: postgres:16-alpine
+    container_name: usuarios-perfiles-db
+    environment:
+      - POSTGRES_DB=db_usuarios_perfiles
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+    volumes:
+      - usuarios_perfiles_data:/var/lib/postgresql/data
+
+  # --- 3. MICROSERVICIO DE IA ---
+  ai-service:
+    build: ./ai-service
+    container_name: ai-service-app
+    ports:
+      - "8082:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ai-service-db:5432/ai_service_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - GCP_CREDENTIALS=${GCP_CREDENTIALS}
+      - RSA_PUBLIC=${RSA_PUBLIC}
+      - GRPC_USUARIOS_HOST=usuarios-perfiles-service
+      - GRPC_USUARIOS_PORT=50051
+      - KEYSTORE_PASSWORD=iamfit2026
+    depends_on:
+      - ai-service-db
+      - rabbitmq
+      - usuarios-perfiles-service
+
+  ai-service-db:
+    image: pgvector/pgvector:pg16
+    container_name: ai-service-db
+    environment:
+      - POSTGRES_DB=ai_service_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ai_service_data:/var/lib/postgresql/data
+
+  #--- MICROSERVICIO ALIMENTACION IA ---
+  alimentacion-service:
+    build: ./iamfit-meal-planner
+    container_name: alimentacion-app
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://alimentacion-db:5432/db_alimentacion
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=pass
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - RSA_PUBLIC=${RSA_PUBLIC}
+      - GCP_CREDENTIALS=${GCP_CREDENTIALS}
+    depends_on:
+      - alimentacion-db
+      - rabbitmq
+      - usuarios-perfiles-service
+
+  alimentacion-db:
+    image: pgvector/pgvector:pg16
+    container_name: alimentacion-db
+    environment:
+      - POSTGRES_DB=db_alimentacion
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+    volumes:
+      - alimentacion_data:/var/lib/postgresql/data
+
+  # --- INFRAESTRUCTURA COMPARTIDA ---
+  cache-redis:
+    image: redis:7-alpine
+    container_name: cache-redis
+    ports:
+      - "6380:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ai-service-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+
+volumes:
+  autenticacion_seguridad_data:
+  usuarios_perfiles_data:
+  ai_service_data:
+  alimentacion_data:

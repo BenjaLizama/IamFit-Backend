@@ -1,0 +1,17 @@
+server:
+  port: 8080
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{userIp}] %-5level %logger{36} - %msg%n"
+
+spring:
+  application:
+    name: usuarios-perfiles
+  grpc:
+    server:
+      port: 50051
+      http2:
+        enabled: true
+      security:
+        enabled: true

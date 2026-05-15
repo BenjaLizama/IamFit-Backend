@@ -1,0 +1,61 @@
+name: "Calidad de código"
+
+on:
+  push:
+    branches:
+      - main
+      - autenticacion-seguridad
+      - usuarios-perfiles
+    paths:
+      - 'autenticacion-seguridad/**'
+      - 'usuarios-perfiles/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: ["autenticacion-seguridad", "usuarios-perfiles"]
+    paths:
+      - 'autenticacion-seguridad/**'
+      - 'usuarios-perfiles/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [usuarios-perfiles, autenticacion-seguridad]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          # Si es un PR, comparamos contra la rama base
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_REF="origin/${{ github.base_ref }}"
+            if git diff --quiet $BASE_REF HEAD -- ${{ matrix.service }}; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+            else
+              echo "changed=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Si es un push, intentamos comparar con el anterior, si falla (primer commit), asumimos true
+            if git diff --quiet HEAD^ HEAD -- ${{ matrix.service }} 2>/dev/null; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+            else
+              echo "changed=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Run Maven Tests
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          cd ${{ matrix.service }}
+          mvn clean test

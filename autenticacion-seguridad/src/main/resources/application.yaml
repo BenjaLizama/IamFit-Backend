@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{userIp}] %-5level %logger{36} - %msg%n"
+
+spring:
+  grpc:
+    client:
+      channels:
+        user-profile-service:
+          address: "static://127.0.0.1:9090"
+          negotiation-type: plaintext
+          use-direct-executor: true
+
+  application:
+    name: autenticacion-seguridad
+
+  session:
+    store-type: jdbc
+
+  security:
+    jwt:
+      rsa-private: ${RSA_PRIVATE:}
+      rsa-public: ${RSA_PUBLIC:}
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+app:
+  cleanup:
+    session:
+      cron: "0 0 * * * ?" # cada hora
+    account:
+      cron: "0 0 3 * * ?" # diario a las 3am
+      grace-period-days: 30
