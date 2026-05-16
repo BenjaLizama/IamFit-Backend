@@ -59,6 +59,36 @@ services:
     volumes:
       - usuarios_perfiles_data:/var/lib/postgresql/data
 
+  # ---3 MICROSERVICIO DE RUTINAS ---
+  ms-rutinas-service:
+    build: ./ms-rutinas
+    container_name: ms-rutinas-app
+
+    ports:
+      - "8082:8080"
+
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ms-rutinas-db:5432/salud_db
+      - SPRING_DATASOURCE_USERNAME=dev_user
+      - SPRING_DATASOURCE_PASSWORD=dev_password
+
+    depends_on:
+      - ms-rutinas-db
+
+  ms-rutinas-db:
+    image: pgvector/pgvector:pg16
+    container_name: ms-rutinas-db
+
+    environment:
+      - POSTGRES_DB=salud_db
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - ms_rutinas_data:/var/lib/postgresql/data
+      - ./ms-rutinas/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+
   # --- INFRAESTRUCTURA COMPARTIDA ---
   cache-redis:
     image: redis:7-alpine
@@ -69,3 +99,4 @@ services:
 volumes:
   autenticacion_seguridad_data:
   usuarios_perfiles_data:
+  ms_rutinas_data:
