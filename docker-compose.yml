@@ -14,8 +14,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=pass
       - SPRING_REDIS_HOST=cache-redis
-      - RSA_PRIVATE=MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDDlDAEsj3fzHHBI6hZP/2UvPifvvbEyVYWHzFyvy5lFC+RjRCrnD64DHPhS8c/f2DMZ40kHOcM3vaR/3iY+8rirsxN1PdcZgB0noF0n4n3/RSU51T6lnOSGEs7KcOc+z6byyF8RdLvPKWHBzAB70Ge4lyf+B1Q7wfGVk2x/nu4jbLKP1G8UI8sTagaMv+gFGCqgBYueMFR8N7yOgHSRowqwnM4jNttVD1t54NOT8zmNxtwrtJX/3iRFrR3vJXhcSp/7D6fGkYubcdHbPdw7Up9zmCD3tWacau27FnGML0YtKL2DfkC2IhvcZ0YdyI6Ucj4diQ4cSG3d824kzfZ1vZ7AgMBAAECggEAXkKzie/mBlDgmnd3EdzXeLJDGarOADYROYQ7LtSZpbm+22WjnTImwEmwJ+t/0kiv/JQD4F3VtcxYBjGcjA7+z5XzfaeguHWozov+VJj3w//Dxahguo18kfMHfzI3xxcIK8oRD3YPnaIbHSMHrkcD13G9tpO8fV9W3e6Gb7z5IA7BzjhFb378VXHHfsrU8Q5z3j9YV036ipaCykLM9PpHshsIg39JVbimzVNgwn4P81NQPQ2/7HTQ5IN2VKqnypDjl/fzR2e1HD++CmvtRbTIVsM+Wz+h5BXyCAYIjkVj6FUN2FFHzrNB4RhQz5mKwBYQUKAmYl9rI65J1t8Z35b50QKBgQDGJP1kzhhkltmakyUxUkvrTAOsAhlmdr2GpD5upk1lGKNa566Sr34SwVzAAGwzNTih6S+veKDBMIxpOJPNZJZW/Fw44i9IPAZgxviB4moWDgLs8q4of8LxIT0aRoTFTG0Bs12MrwzvM8YPNTtB3xxnDM5eL416lVg8ydKC6weytwKBgQD8r2ueo7dVOmLhD0cX2SSSHpPVP9qdZH0BxVq3ThWtHzqtzC1dVf9Nfh2v4tVdWPs0MoaA87kwIPJWVUcPJvQ5vds92FIQu/siJOLydJvkUNZqlT4e+tDI1VLIfAqM2Tk7+JoFM4eDWNy8O1z9cISIAf0TvWb4wan388ECOztGXQKBgC4ogcsQ48fTCGAk9R4XQM5Qh+5zEr223ZHXAyA9p3vskGll3VoYfbMazmN/9bS8KjQ1oUEsRa6bg6ojXvMTAp7C7SznLAKU0RuMXmnLd9EpdG8EXaPbl2saxiQv11Aq7J3fzeQvB0FV+0ahrOs8cV5kMlLomvm6frKyhVKwM7vjAoGARPoV5K5IQ4m2qD0laQsrgn+6V0IhCUn/Hdaj1toH7MRTnlHYKFxrXtoIfJTtLZg2qp8IPHdLnCnCPXL1/NrjXEfJa257qHnIKh/rm8fdLkwq29l1pbtN9yTUfknuD1jU2NwaH0Vbvq0pRHDoB38Jjp8MWLEhRNKI9Vii3VsR6TkCgYA22rNq8xX34mrlSlKXN41vACCm236HEjmafu671kyx6c5WKdXYpoq5xSrVdDfFMU0b1IRrX5MATch1r4q4TJPuamTLOulb7vT16K6nN11DrbYQcS6Oj3nSQ+7mQamkFvcIgDIXx7GMcBKUwqYPlxtcPNALGIb0kUBE3zsY7PU6wQ==
-      - RSA_PUBLIC=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw5QwBLI938xxwSOoWT/9lLz4n772xMlWFh8xcr8uZRQvkY0Qq5w+uAxz4UvHP39gzGeNJBznDN72kf94mPvK4q7MTdT3XGYAdJ6BdJ+J9/0UlOdU+pZzkhhLOynDnPs+m8shfEXS7zylhwcwAe9BnuJcn/gdUO8HxlZNsf57uI2yyj9RvFCPLE2oGjL/oBRgqoAWLnjBUfDe8joB0kaMKsJzOIzbbVQ9beeDTk/M5jcbcK7SV/94kRa0d7yV4XEqf+w+nxpGLm3HR2z3cO1Kfc5gg97VmnGrtuxZxjC9GLSi9g35AtiIb3GdGHciOlHI+HYkOHEht3fNuJM32db2ewIDAQAB
+      -RSA_PRIVATE=
+      RSA_PUBLIC=
     entrypoint: ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
     depends_on:
       - autenticacion-seguridad-db
@@ -59,6 +59,36 @@ services:
     volumes:
       - usuarios_perfiles_data:/var/lib/postgresql/data
 
+  # ---3 MICROSERVICIO DE RUTINAS ---
+  ms-rutinas-service:
+    build: ./ms-rutinas
+    container_name: ms-rutinas-app
+
+    ports:
+      - "8082:8080"
+
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ms-rutinas-db:5432/salud_db
+      - SPRING_DATASOURCE_USERNAME=dev_user
+      - SPRING_DATASOURCE_PASSWORD=dev_password
+
+    depends_on:
+      - ms-rutinas-db
+
+  ms-rutinas-db:
+    image: pgvector/pgvector:pg16
+    container_name: ms-rutinas-db
+
+    environment:
+      - POSTGRES_DB=salud_db
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - ms_rutinas_data:/var/lib/postgresql/data
+      - ./ms-rutinas/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+
   # --- INFRAESTRUCTURA COMPARTIDA ---
   cache-redis:
     image: redis:7-alpine
@@ -69,3 +99,4 @@ services:
 volumes:
   autenticacion_seguridad_data:
   usuarios_perfiles_data:
+  ms_rutinas_data:
