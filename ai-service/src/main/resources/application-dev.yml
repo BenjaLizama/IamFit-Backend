@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/iamfit_ai_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  rabbitmq:
+    host: localhost
+
+server:
+  port: ${DEV_PORT:8081}
+
+grpc:
+  client:
+    usuarios-perfiles:
+      address: static://localhost:50052

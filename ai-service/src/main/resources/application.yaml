@@ -1,27 +1,6 @@
-server:
-  port: ${DEV_PORT:8081}
-  ssl:
-    enabled: true
-    key-store: classpath:keystore.p12
-    key-store-type: PKCS12
-    key-store-password: ${KEYSTORE_PASSWORD:iamfit2026}
-    key-alias: iamfit-ai
-    enabled-protocols: TLSv1.3
-
 spring:
   application:
     name: iamfit-ai-service
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          public-key-location: ${RSA_PUBLIC_KEY_PATH:}
-
-  datasource:
-    url: jdbc:postgresql://localhost:5432/iamfit_ai_db
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -44,30 +23,41 @@ spring:
           options:
             model: text-embedding-004
 
-    vectorstore:
-      pgvector:
-        index-type: HNSW
-        distance-type: COSINE_DISTANCE
-        dimensions: 768
-        initialize-schema: true
+  vectorstore:
+    pgvector:
+      index-type: HNSW
+      distance-type: COSINE_DISTANCE
+      dimensions: 768
+      initialize-schema: true
 
   rabbitmq:
-    host: localhost
     port: 5672
     username: guest
     password: guest
 
-# ===== COLA RABBITMQ =====
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          public-key-location: ${RSA_PUBLIC_KEY_PATH:}
+
+server:
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-type: PKCS12
+    key-store-password: ${KEYSTORE_PASSWORD:iamfit2026}
+    key-alias: iamfit-ai
+    enabled-protocols: TLSv1.3
+
 iamfit:
   rabbitmq:
     queues:
       user-created: iamfit.user.created
 
-# ===== gRPC CLIENT =====
 grpc:
   client:
     usuarios-perfiles:
-      address: static://${GRPC_USUARIOS_HOST:localhost}:${GRPC_USUARIOS_PORT:50052}
       negotiation-type: plaintext
 
 resilience4j:

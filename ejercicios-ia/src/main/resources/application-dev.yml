@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/salud_db
+    username: dev_user
+    password: dev_password
+    driver-class-name: org.postgresql.Driver
+
+  rabbitmq:
+    host: localhost
+
+  grpc:
+    client:
+      channels:
+        usuarios-perfiles-service:
+          address: 'localhost:50051'
+          negotiation-type: plaintext
+          security:
+            enabled: false

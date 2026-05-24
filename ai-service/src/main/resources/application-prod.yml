@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:rabbitmq}
+
+server:
+  port: 8081
+
+grpc:
+  client:
+    usuarios-perfiles:
+      address: static://${GRPC_USUARIOS_HOST:usuarios-perfiles-app}:${GRPC_USUARIOS_PORT:50051}

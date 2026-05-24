@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: iamfit-ejercicios
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: iamfit-ai-service
+          location: us-central1
+          chat:
+            options:
+              model: gemini-2.5-flash
+        embedding:
+          project-id: iamfit-ai-service
+          location: us-central1
+          options:
+            model: text-embedding-004
+
+  vectorstore:
+    pgvector:
+      initialize-schema: true
+      table-name: vector_store
+      dimensions: 768
+      distance-type: COSINE_DISTANCE
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          public-key-location: file:/tmp/auth-public.pem
+
+  rabbitmq:
+    port: 5672
+    username: guest
+    password: guest
+
+iamfit:
+  grpc:
+    usuarios-perfiles:
+      enabled: false
+  rabbitmq:
+    queues:
+      workout-completed: iamfit.workout.completed
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.iamfit: DEBUG
+    org.springframework.ai: INFO

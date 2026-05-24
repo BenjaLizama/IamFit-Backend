@@ -1,13 +1,13 @@
-package com.iamfit.ai_service;
+package com.iamfit.ejercicios;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class VertexAiServiceApplicationTests {
+class MsRutinasApplicationTests {
 
-    @Test
-    void contextLoads() {
-    }
+	@Test
+	void contextLoads() {
+	}
 
 }

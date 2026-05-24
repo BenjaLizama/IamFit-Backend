@@ -46,12 +46,15 @@ class AuthControllerTest {
         this.objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
     }
 
+    private UserProfileRequest mockProfile() {
+        return new UserProfileRequest("testuser", 25, 70, 175, "M");
+    }
     @Test
     @DisplayName("Debería registrar un usuario y retornar 201 Created")
     void registerSuccessTest() throws Exception {
         RegisterRequest regReq = new RegisterRequest("test@mail.com", "Password123!");
         SessionRequest sessReq = new SessionRequest("dev-123", "Chrome-Linux");
-        RegisterWrapper wrapper = new RegisterWrapper(regReq, sessReq);
+        RegisterWrapper wrapper = new RegisterWrapper(regReq, mockProfile(), sessReq);
         AuthResponse response = new AuthResponse("access", "refresh", Instant.now());
 
         when(authService.register(any())).thenReturn(response);

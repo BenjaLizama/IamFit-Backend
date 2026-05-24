@@ -156,7 +156,7 @@ public class ErrorMapper {
     }
 
     public StandarErrorResponse toInvalidPasswordResponse(Exception ex, String path) {
-        return buildBaseError(HttpStatus.UNPROCESSABLE_ENTITY, path)
+        return buildBaseError(HttpStatus.UNPROCESSABLE_CONTENT, path)
                 .code("ERR_INVALID_PASSWORD_001")
                 .message(ex.getMessage())
                 .developerMessage("La contraseña actual no coincide con la registrada en la base de datos.")

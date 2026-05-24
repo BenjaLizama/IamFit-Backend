@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.iamfit.grpc.common";
+
+package user;
+
+service UserProfileGrpcService {
+  rpc OnUserCreated(UserCreatedEvent) returns (UserCreatedResponse);
+  rpc GetUserProfile(GetUserProfileRequest) returns (UserProfileResponse);
+}
+
+message UserCreatedEvent {
+  string credential_id = 1;
+  string nickname = 2;
+  int32 age = 3;
+  int32 height = 4;
+  int32 weight = 5;
+  string sex = 6;
+}
+
+message UserCreatedResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetUserProfileRequest {
+  string credential_id = 1;
+}
+
+message UserProfileResponse {
+  string credential_id = 1;
+  string nickname = 2;
+  int32 age = 3;
+  int32 height = 4;
+  int32 weight = 5;
+  string sex = 6;
+  bool found = 7;
+}

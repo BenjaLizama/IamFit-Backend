@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:rabbitmq}
+
+  grpc:
+    client:
+      channels:
+        usuarios-perfiles-service:
+          address: 'usuarios-perfiles-app:50051'
+          negotiation-type: plaintext
+          security:
+            enabled: false

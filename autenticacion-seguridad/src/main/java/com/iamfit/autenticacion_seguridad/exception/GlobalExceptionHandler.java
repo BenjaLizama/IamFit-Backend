@@ -176,7 +176,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidPasswordException.class)
     public ResponseEntity<StandarErrorResponse> handleInvalidPassword(InvalidPasswordException ex, HttpServletRequest request) {
         log.warn("Contraseña incorrecta en {}: {}", request.getRequestURI(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(errorMapper.toInvalidPasswordResponse(ex, request.getRequestURI()));
     }
 

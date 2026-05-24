@@ -40,10 +40,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-@Import(AuthIntegrationTest.TestAdminController.class) // Importamos directamente el controlador
+@Import(AuthIntegrationTest.TestAdminController.class)
 class AuthIntegrationTest {
 
-    // CONTROLADOR FAKE SIMPLIFICADO (Sin Config interna para evitar duplicidad)
     @RestController
     static class TestAdminController {
         @PostMapping("/api/v1/admin/test-protection")
@@ -61,6 +60,10 @@ class AuthIntegrationTest {
 
     private final String DEVICE_HEADER = "X-Device-ID";
     private final String DEFAULT_DEVICE = "test-device-id";
+
+    private UserProfileRequest mockProfile() {
+        return new UserProfileRequest("testuser", 25, 70, 175, "M");
+    }
 
     @DynamicPropertySource
     static void overrideRsaProperties(DynamicPropertyRegistry registry) {
@@ -97,7 +100,8 @@ class AuthIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .header(DEVICE_HEADER, DEFAULT_DEVICE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RegisterWrapper(regReq, sessReq))))
+                        .content(objectMapper.writeValueAsString(
+                                new RegisterWrapper(regReq, mockProfile(), sessReq))))
                 .andExpect(status().isCreated());
 
         LoginRequest logReq = new LoginRequest("full@test.com", "Password123!", LoginProvider.LOCAL);
@@ -114,12 +118,17 @@ class AuthIntegrationTest {
     void concurrentRefreshTokenTest() throws Exception {
         String deviceId = "refresh-device";
         SessionRequest sess = new SessionRequest(deviceId, "Node");
-        RegisterWrapper reg = new RegisterWrapper(new RegisterRequest("ref@test.com", "Pass123!"), sess);
+        RegisterWrapper reg = new RegisterWrapper(
+                new RegisterRequest("ref@test.com", "Pass123!"),
+                mockProfile(),
+                sess
+        );
 
         String res = mockMvc.perform(post("/api/v1/auth/register")
-                .header(DEVICE_HEADER, deviceId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(reg))).andReturn().getResponse().getContentAsString();
+                        .header(DEVICE_HEADER, deviceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reg)))
+                .andReturn().getResponse().getContentAsString();
 
         AuthResponse auth = objectMapper.readValue(res, AuthResponse.class);
         RefreshTokenWrapper wrap = new RefreshTokenWrapper(new RefreshTokenRequest(auth.refreshToken()), sess);
@@ -145,10 +154,10 @@ class AuthIntegrationTest {
 
         RegisterWrapper reg = new RegisterWrapper(
                 new RegisterRequest("user@test.com", securePass),
+                mockProfile(),
                 new SessionRequest(devId, "n")
         );
 
-        // 1. Registro
         String res = mockMvc.perform(post("/api/v1/auth/register")
                         .header(DEVICE_HEADER, devId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -158,12 +167,10 @@ class AuthIntegrationTest {
 
         AuthResponse auth = objectMapper.readValue(res, AuthResponse.class);
 
-        // 2. Acceso denegado (403)
         mockMvc.perform(post("/api/v1/admin/test-protection")
                         .header("Authorization", "Bearer " + auth.accessToken())
                         .header(DEVICE_HEADER, devId))
                 .andExpect(status().isForbidden())
-                // Actualizamos el código esperado según tus logs:
                 .andExpect(jsonPath("$.code").value("ERR_FORBIDDEN_001"));
     }
 
@@ -171,15 +178,18 @@ class AuthIntegrationTest {
     @DisplayName("Registro fallido: Email duplicado")
     void registerDuplicateEmailTest() throws Exception {
         RegisterRequest req = new RegisterRequest("dup@test.com", "Pass123!");
+
         mockMvc.perform(post("/api/v1/auth/register")
                 .header(DEVICE_HEADER, "d1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RegisterWrapper(req, new SessionRequest("d1", "n")))));
+                .content(objectMapper.writeValueAsString(
+                        new RegisterWrapper(req, mockProfile(), new SessionRequest("d1", "n")))));
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .header(DEVICE_HEADER, "d2")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RegisterWrapper(req, new SessionRequest("d2", "n")))))
+                        .content(objectMapper.writeValueAsString(
+                                new RegisterWrapper(req, mockProfile(), new SessionRequest("d2", "n")))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -187,12 +197,21 @@ class AuthIntegrationTest {
     @DisplayName("Login fallido: Password incorrecto")
     void loginWrongPasswordTest() throws Exception {
         String dev = "login-dev";
+
         mockMvc.perform(post("/api/v1/auth/register")
                 .header(DEVICE_HEADER, dev)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RegisterWrapper(new RegisterRequest("p@test.com", "Correct123!"), new SessionRequest(dev, "n")))));
+                .content(objectMapper.writeValueAsString(
+                        new RegisterWrapper(
+                                new RegisterRequest("p@test.com", "Correct123!"),
+                                mockProfile(),
+                                new SessionRequest(dev, "n")
+                        ))));
 
-        LoginWrapper wrong = new LoginWrapper(new LoginRequest("p@test.com", "Wrong!", LoginProvider.LOCAL), new SessionRequest(dev, "n"));
+        LoginWrapper wrong = new LoginWrapper(
+                new LoginRequest("p@test.com", "Wrong!", LoginProvider.LOCAL),
+                new SessionRequest(dev, "n")
+        );
         mockMvc.perform(post("/api/v1/auth/login")
                         .header(DEVICE_HEADER, dev)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -209,12 +228,21 @@ class AuthIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                 .header(DEVICE_HEADER, dev)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RegisterWrapper(new RegisterRequest(email, ".123Contrasena#"), new SessionRequest(dev, "Old")))));
+                .content(objectMapper.writeValueAsString(
+                        new RegisterWrapper(
+                                new RegisterRequest(email, ".123Contrasena#"),
+                                mockProfile(),
+                                new SessionRequest(dev, "Old")
+                        ))));
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .header(DEVICE_HEADER, dev)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new LoginWrapper(new LoginRequest(email, ".123Contrasena#", LoginProvider.LOCAL), new SessionRequest(dev, "New")))))
+                        .content(objectMapper.writeValueAsString(
+                                new LoginWrapper(
+                                        new LoginRequest(email, ".123Contrasena#", LoginProvider.LOCAL),
+                                        new SessionRequest(dev, "New")
+                                ))))
                 .andExpect(status().isOk());
 
         assertThat(sessionRepository.findAll()).hasSize(1);
@@ -225,10 +253,16 @@ class AuthIntegrationTest {
     @DisplayName("Flujo Completo: Logout")
     void logoutFlowTest() throws Exception {
         String dev = "out-dev";
+
         String res = mockMvc.perform(post("/api/v1/auth/register")
                         .header(DEVICE_HEADER, dev)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RegisterWrapper(new RegisterRequest("out@test.com", ".123Contrasena#"), new SessionRequest(dev, "n")))))
+                        .content(objectMapper.writeValueAsString(
+                                new RegisterWrapper(
+                                        new RegisterRequest("out@test.com", ".123Contrasena#"),
+                                        mockProfile(),
+                                        new SessionRequest(dev, "n")
+                                ))))
                 .andReturn().getResponse().getContentAsString();
 
         AuthResponse auth = objectMapper.readValue(res, AuthResponse.class);
@@ -255,6 +289,7 @@ class AuthIntegrationTest {
                         .content(objectMapper.writeValueAsString(
                                 new RegisterWrapper(
                                         new RegisterRequest(email, oldPassword),
+                                        mockProfile(),
                                         new SessionRequest(deviceId, "Phone")
                                 ))))
                 .andExpect(status().isCreated())

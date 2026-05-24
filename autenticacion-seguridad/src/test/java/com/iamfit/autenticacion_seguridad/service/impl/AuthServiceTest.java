@@ -38,6 +38,9 @@ class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
+    private UserProfileRequest mockProfile() {
+        return new UserProfileRequest("testuser", 25, 70, 175, "M");
+    }
     // Métodos de ayuda corregidos con Instant
     private SessionRequest createMockSessionRequest() {
         return new SessionRequest("device-001", "Chrome/Windows");
@@ -57,7 +60,8 @@ class AuthServiceTest {
     void register_Success() {
         RegisterRequest regReq = new RegisterRequest("test@nomall.com", "password123");
         SessionRequest sessReq = createMockSessionRequest();
-        RegisterWrapper wrapper = new RegisterWrapper(regReq, sessReq);
+        RegisterWrapper wrapper = new RegisterWrapper(regReq, mockProfile(), sessReq);
+
 
         RoleEntity userRole = new RoleEntity();
         userRole.setRoleName("ROLE_USER");
@@ -108,6 +112,7 @@ class AuthServiceTest {
     void register_Fail_EmailExists() {
         RegisterWrapper wrapper = new RegisterWrapper(
                 new RegisterRequest("existing@mail.com", "pass"),
+                mockProfile(),
                 createMockSessionRequest()
         );
         when(credentialRepository.existsByEmail(anyString())).thenReturn(true);
@@ -120,6 +125,7 @@ class AuthServiceTest {
     void register_Fail_RoleNotFound() {
         RegisterWrapper wrapper = new RegisterWrapper(
                 new RegisterRequest("test@mail.com", "pass"),
+                mockProfile(),
                 createMockSessionRequest()
         );
         when(credentialRepository.existsByEmail(anyString())).thenReturn(false);

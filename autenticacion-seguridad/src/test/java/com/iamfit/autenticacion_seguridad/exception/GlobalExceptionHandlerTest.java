@@ -95,8 +95,8 @@ class GlobalExceptionHandlerTest {
         mockMvc.perform(get("/err/11")).andExpect(status().isInternalServerError());
         mockMvc.perform(get("/err/12")).andExpect(status().isForbidden());
         mockMvc.perform(get("/err/13")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/err/14")).andExpect(status().isUnprocessableEntity());
-        mockMvc.perform(get("/err/15")).andExpect(status().isUnprocessableEntity());
+        mockMvc.perform(get("/err/14")).andExpect(status().is(422));
+        mockMvc.perform(get("/err/15")).andExpect(status().is(422));
         mockMvc.perform(get("/err/16")).andExpect(status().isConflict());
         mockMvc.perform(get("/err/0")).andExpect(status().isInternalServerError());
 
