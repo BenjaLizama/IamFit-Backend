@@ -1,8 +1,17 @@
 spring:
   application:
     name: iamfit-meal-planner
-
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+  mvc:
+    static-path-pattern: /static/**
+    web:
+      resources:
+        add-mappings: false
   jpa:
+    defer-datasource-initialization: true
     hibernate:
       ddl-auto: update
     properties:
@@ -48,6 +57,9 @@ spring:
     password: guest
 
 iamfit:
+  calorieninjas:
+    api-key: ${CALORIENINJAS_API_KEY:}
+    base-url: https://api.calorieninjas.com/v1
   rabbitmq:
     queues:
       meal-logged: iamfit.meal.logged

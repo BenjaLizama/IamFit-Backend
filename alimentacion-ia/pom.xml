@@ -104,6 +104,12 @@
             <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
         </dependency>
 
+        <!-- HTTP Client para APIs externas -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
         <!-- ===== gRPC CLIENTE ===== -->
         <dependency>
             <groupId>org.springframework.grpc</groupId>
