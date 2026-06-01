@@ -9,8 +9,9 @@ spring:
     host: ${SPRING_RABBITMQ_HOST:rabbitmq}
 
 server:
+  ssl:
+    enabled: false
   port: 8081
-
 grpc:
   client:
     usuarios-perfiles:

@@ -1,181 +1,114 @@
+version: '3.8'
+
 services:
-  # --- 1. MICROSERVICIO DE AUTENTICACIÓN Y SEGURIDAD ---
+  # --- 1. AUTENTICACIÓN Y SEGURIDAD ---
   autenticacion-seguridad-service:
-    build: ./autenticacion-seguridad
+    image: 433634597248.dkr.ecr.us-east-1.amazonaws.com/iamfit/autenticacion-seguridad:latest
     container_name: autenticacion-seguridad-app
     ports:
       - "8080:8080"
       - "50051:50051"
     environment:
-      - SPRING_PROFILE_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://autenticacion-seguridad-db:5432/db_autenticacion_seguridad
-      - SPRING_DATASOURCE_USERNAME=user
-      - SPRING_DATASOURCE_PASSWORD=pass
-      - SPRING_REDIS_HOST=cache-redis
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://iamfit-db-instance-1.ch37wpohshat.us-east-1.rds.amazonaws.com:5432/iamfit_db
+      - SPRING_DATASOURCE_USERNAME=iamfit_admin
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_REDIS_HOST=master.iamfit-redis.wetuo3.use1.cache.amazonaws.com
       - RSA_PRIVATE=${RSA_PRIVATE}
       - RSA_PUBLIC=${RSA_PUBLIC}
-    entrypoint: ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
     depends_on:
-      - autenticacion-seguridad-db
-      - cache-redis
+      - rabbitmq
+    restart: unless-stopped
 
-  autenticacion-seguridad-db:
-    image: postgres:16-alpine
-    container_name: autenticacion-seguridad-db
-    environment:
-      - POSTGRES_DB=db_autenticacion_seguridad
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=pass
-    volumes:
-      - autenticacion_seguridad_data:/var/lib/postgresql/data
-
-  # --- 2. MICROSERVICIO DE USUARIOS Y PERFILES ---
+  # --- 2. USUARIOS Y PERFILES ---
   usuarios-perfiles-service:
-    build: ./usuarios-perfiles
+    image: 433634597248.dkr.ecr.us-east-1.amazonaws.com/iamfit/usuarios-perfiles:latest
     container_name: usuarios-perfiles-app
     ports:
       - "8081:8080"
       - "50052:50051"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://usuarios-perfiles-db:5432/db_usuarios_perfiles
-      - SPRING_DATASOURCE_USERNAME=user
-      - SPRING_DATASOURCE_PASSWORD=pass
-      - SPRING_REDIS_HOST=cache-redis
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://iamfit-db-instance-1.ch37wpohshat.us-east-1.rds.amazonaws.com:5432/iamfit_db
+      - SPRING_DATASOURCE_USERNAME=iamfit_admin
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_REDIS_HOST=master.iamfit-redis.wetuo3.use1.cache.amazonaws.com
       - RSA_PUBLIC=${RSA_PUBLIC}
-    entrypoint: ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
     depends_on:
-      - usuarios-perfiles-db
-      - cache-redis
+      - rabbitmq
+    restart: unless-stopped
 
-  usuarios-perfiles-db:
-    image: postgres:16-alpine
-    container_name: usuarios-perfiles-db
-    environment:
-      - POSTGRES_DB=db_usuarios_perfiles
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=pass
-    volumes:
-      - usuarios_perfiles_data:/var/lib/postgresql/data
-
-  # --- 3. MICROSERVICIO DE IA ---
+  # --- 3. AI SERVICE ---
   ai-service:
-    build: ./ai-service
+    image: 433634597248.dkr.ecr.us-east-1.amazonaws.com/iamfit/ai-service:latest
     container_name: ai-service-app
     ports:
       - "8082:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ai-service-db:5432/ai_service_db
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://iamfit-db-instance-1.ch37wpohshat.us-east-1.rds.amazonaws.com:5432/iamfit_db
+      - SPRING_DATASOURCE_USERNAME=iamfit_admin
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_RABBITMQ_HOST=rabbitmq
       - GCP_CREDENTIALS=${GCP_CREDENTIALS}
       - RSA_PUBLIC=${RSA_PUBLIC}
-      - GRPC_USUARIOS_HOST=usuarios-perfiles-service
+      - GRPC_USUARIOS_HOST=usuarios-perfiles-app
       - GRPC_USUARIOS_PORT=50051
       - KEYSTORE_PASSWORD=iamfit2026
     depends_on:
-      - ai-service-db
       - rabbitmq
       - usuarios-perfiles-service
+    restart: unless-stopped
 
-  ai-service-db:
-    image: pgvector/pgvector:pg16
-    container_name: ai-service-db
-    environment:
-      - POSTGRES_DB=ai_service_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - ai_service_data:/var/lib/postgresql/data
-
-  #--- 4. MICROSERVICIO ALIMENTACION IA ---
+  # --- 4. ALIMENTACIÓN ---
   alimentacion-service:
-    build: ./alimentacion-ia
+    image: 433634597248.dkr.ecr.us-east-1.amazonaws.com/iamfit/alimentacion:latest
     container_name: alimentacion-app
     ports:
       - "8083:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://alimentacion-db:5432/db_alimentacion
-      - SPRING_DATASOURCE_USERNAME=user
-      - SPRING_DATASOURCE_PASSWORD=pass
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://iamfit-db-instance-1.ch37wpohshat.us-east-1.rds.amazonaws.com:5432/iamfit_db
+      - SPRING_DATASOURCE_USERNAME=iamfit_admin
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_RABBITMQ_HOST=rabbitmq
-      - RSA_PUBLIC=${RSA_PUBLIC}
       - GCP_CREDENTIALS=${GCP_CREDENTIALS}
+      - RSA_PUBLIC=${RSA_PUBLIC}
+      - CALORIENINJAS_API_KEY=${CALORIENINJAS_API_KEY}
     depends_on:
-      - alimentacion-db
       - rabbitmq
       - usuarios-perfiles-service
+    restart: unless-stopped
 
-  alimentacion-db:
-    image: pgvector/pgvector:pg16
-    container_name: alimentacion-db
-    environment:
-      - POSTGRES_DB=db_alimentacion
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=pass
-    volumes:
-      - alimentacion_data:/var/lib/postgresql/data
-
-  # --- 5. MICROSERVICIO DE EJERCICIOS Y RUTINAS ---
+  # --- 5. EJERCICIOS ---
   ejercicios-service:
-    build: ./ejercicios-ia
+    image: 433634597248.dkr.ecr.us-east-1.amazonaws.com/iamfit/ejercicios:latest
     container_name: ejercicios-app
     ports:
       - "8084:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ejercicios-db:5432/salud_db
-      - SPRING_DATASOURCE_USERNAME=user
-      - SPRING_DATASOURCE_PASSWORD=pass
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://iamfit-db-instance-1.ch37wpohshat.us-east-1.rds.amazonaws.com:5432/iamfit_db
+      - SPRING_DATASOURCE_USERNAME=iamfit_admin
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_RABBITMQ_HOST=rabbitmq
       - GCP_CREDENTIALS=${GCP_CREDENTIALS}
       - RSA_PUBLIC=${RSA_PUBLIC}
     depends_on:
-      ejercicios-db:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_started
-      usuarios-perfiles-service:
-        condition: service_started
+      - rabbitmq
+      - usuarios-perfiles-service
+    restart: unless-stopped
 
-  ejercicios-db:
-    image: pgvector/pgvector:pg16
-    container_name: ejercicios-db
-    environment:
-      - POSTGRES_DB=salud_db
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=pass
-    volumes:
-      - ejercicios_data:/var/lib/postgresql/data
-      - ./ejercicios-ia/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user -d salud_db" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # --- INFRAESTRUCTURA COMPARTIDA ---
-  cache-redis:
-    image: redis:7-alpine
-    container_name: cache-redis
-    ports:
-      - "6380:6379"
-
+  # --- RABBITMQ ---
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: ai-service-rabbitmq
+    container_name: iamfit-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
+    restart: unless-stopped
 
-volumes:
-  autenticacion_seguridad_data:
-  usuarios_perfiles_data:
-  ai_service_data:
-  alimentacion_data:
-  ejercicios_data:
+volumes: {}
