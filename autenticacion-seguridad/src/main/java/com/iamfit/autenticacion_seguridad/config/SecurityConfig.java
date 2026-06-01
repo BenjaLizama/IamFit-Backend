@@ -15,6 +15,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+// NUEVOS IMPORTS PARA CORS
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -27,6 +32,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // 1. NUEVO: Habilitar CORS con la configuración definida abajo
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                
                 // CSRF Deshabilitado para utilizar el cliente H2 y POSTMAN sin problemas
                 .csrf(AbstractHttpConfigurer::disable)
                 // Configuracion de los permisos de rutas
@@ -34,7 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll() // Libertad total
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/session/refresh-token").permitAll()
-                        .requestMatchers("/api/v1/session/**").hasAnyAuthority("ROLE_USER", "READ_PRIVILEGE") // fix: antes: READ_PRIVILEGES, ahora: sin s pq así es en RoleAndPrevilegeSeeder
+                        .requestMatchers("/api/v1/session/**").hasAnyAuthority("ROLE_USER", "READ_PRIVILEGE")
                         .anyRequest().authenticated()
                 )
                 // Evita la redirección HTML
@@ -46,9 +54,21 @@ public class SecurityConfig {
                 // Importante para H2: Permite que la consola se cargue en un Frame
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable));
 
-                // Habilitar login basico por si se necesita probar algo rapido
-                //.formLogin(Customizer.withDefaults());
         return http.build();
+    }
+
+    // 2. NUEVO BEAN: Define las reglas CORS para que tu App de Expo pueda comunicarse
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("*")); // En desarrollo permite cualquier origen (IP del móvil)
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
+        configuration.setExposedHeaders(List.of("Authorization"));
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
@@ -60,5 +80,4 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-
 }
