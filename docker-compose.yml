@@ -2,7 +2,7 @@ services:
   # --- 1. MICROSERVICIO DE AUTENTICACIÓN Y SEGURIDAD ---
   autenticacion-seguridad-service:
     build: ./autenticacion-seguridad
-    container_name: autenticacion-seguridad-app
+    container_name: autenticacion-seguridad-app-local
     ports:
       - "8080:8080"
       - "50051:50051"
@@ -21,7 +21,7 @@ services:
 
   autenticacion-seguridad-db:
     image: postgres:16-alpine
-    container_name: autenticacion-seguridad-db
+    container_name: autenticacion-seguridad-db-local
     environment:
       - POSTGRES_DB=db_autenticacion_seguridad
       - POSTGRES_USER=user
@@ -32,7 +32,7 @@ services:
   # --- 2. MICROSERVICIO DE USUARIOS Y PERFILES ---
   usuarios-perfiles-service:
     build: ./usuarios-perfiles
-    container_name: usuarios-perfiles-app
+    container_name: usuarios-perfiles-app-local
     ports:
       - "8081:8080"
       - "50052:50051"
@@ -50,7 +50,7 @@ services:
 
   usuarios-perfiles-db:
     image: postgres:16-alpine
-    container_name: usuarios-perfiles-db
+    container_name: usuarios-perfiles-db-local
     environment:
       - POSTGRES_DB=db_usuarios_perfiles
       - POSTGRES_USER=user
@@ -61,7 +61,7 @@ services:
   # --- 3. MICROSERVICIO DE IA ---
   ai-service:
     build: ./ai-service
-    container_name: ai-service-app
+    container_name: ai-service-app-local
     ports:
       - "8082:8081"
     environment:
@@ -82,7 +82,7 @@ services:
 
   ai-service-db:
     image: pgvector/pgvector:pg16
-    container_name: ai-service-db
+    container_name: ai-service-db-local
     environment:
       - POSTGRES_DB=ai_service_db
       - POSTGRES_USER=postgres
@@ -93,7 +93,7 @@ services:
   #--- 4. MICROSERVICIO ALIMENTACION IA ---
   alimentacion-service:
     build: ./alimentacion-ia
-    container_name: alimentacion-app
+    container_name: alimentacion-app-local
     ports:
       - "8083:8080"
     environment:
@@ -110,7 +110,7 @@ services:
 
   alimentacion-db:
     image: pgvector/pgvector:pg16
-    container_name: alimentacion-db
+    container_name: alimentacion-db-local
     environment:
       - POSTGRES_DB=db_alimentacion
       - POSTGRES_USER=user
@@ -121,7 +121,7 @@ services:
   # --- 5. MICROSERVICIO DE EJERCICIOS Y RUTINAS ---
   ejercicios-service:
     build: ./ejercicios-ia
-    container_name: ejercicios-app
+    container_name: ejercicios-app-local
     ports:
       - "8084:8080"
     environment:
@@ -142,7 +142,7 @@ services:
 
   ejercicios-db:
     image: pgvector/pgvector:pg16
-    container_name: ejercicios-db
+    container_name: ejercicios-db-local
     environment:
       - POSTGRES_DB=salud_db
       - POSTGRES_USER=user
@@ -159,13 +159,13 @@ services:
   # --- INFRAESTRUCTURA COMPARTIDA ---
   cache-redis:
     image: redis:7-alpine
-    container_name: cache-redis
+    container_name: cache-redis-local
     ports:
       - "6380:6379"
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: ai-service-rabbitmq
+    container_name: ai-service-rabbitmq-local
     ports:
       - "5672:5672"
       - "15672:15672"

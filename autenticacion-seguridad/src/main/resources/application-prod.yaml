@@ -21,7 +21,7 @@ spring:
     client:
       channels:
         usuarios-perfiles-service:
-                  address: 'usuarios-perfiles-app:50051'
+                  address: 'usuarios-perfiles-service:50051'
                   negotiation-type: plaintext
                   security:
                     enabled: false
