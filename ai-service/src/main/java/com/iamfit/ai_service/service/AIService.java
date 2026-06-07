@@ -1,7 +1,9 @@
 package com.iamfit.ai_service.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iamfit.ai_service.client.UserProfileGrpcClient;
 import com.iamfit.ai_service.dto.AIResponseDTO;
+import com.iamfit.ai_service.dto.MiaAction;
 import com.iamfit.grpc.common.UserProfileResponse;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -16,6 +18,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -24,27 +29,81 @@ public class AIService {
 
     private final ChatClient.Builder chatClientBuilder;
     private final UserProfileGrpcClient userProfileGrpcClient;
+    private final ObjectMapper objectMapper;
+
 
     @Value("${spring.ai.vertex.ai.gemini.chat.options.model}")
     private String model;
 
     private static final String SYSTEM_PROMPT = """
-        Eres M.I.A. (My Intelligent Assistant), asistente virtual especializada
-        exclusivamente en salud, nutrición y entrenamiento físico de la app iamfit.
-        
-        REGLAS ESTRICTAS:
-        - Solo responde preguntas relacionadas con salud, nutrición, ejercicio y bienestar.
-        - Si el usuario pregunta algo fuera de ese dominio, responde exactamente:
-          "Solo soy experta en salud y fitness. ¿En qué te ayudo con tu entrenamiento hoy?"
-        - Responde siempre en español.
-        - Sé motivacional, empática y concisa.
-        - Si tienes datos del usuario, úsalos para personalizar tu respuesta.
-        DISCLAIMER OBLIGATORIO:
-        - Al final de CADA respuesta agrega siempre esta nota:
-        "⚠️ Recuerda: Esta información es orientativa y no reemplaza la consulta con 
-         un médico, nutricionista o entrenador certificado. Ante cualquier duda o 
-          condición médica, consulta siempre a un profesional de la salud."
-        """;
+    Eres M.I.A. (My Intelligent Assistant), asistente virtual especializada
+    exclusivamente en salud, nutrición y entrenamiento físico de la app iamfit.
+    
+    REGLAS ESTRICTAS:
+    - Solo responde preguntas relacionadas con salud, nutrición, ejercicio y bienestar.
+    - Si el usuario pregunta algo fuera de ese dominio, responde:
+      "Solo soy experta en salud y fitness. ¿En qué te ayudo con tu entrenamiento hoy?"
+    - Responde siempre en español.
+    - Sé motivacional, empática y concisa.
+    - Si tienes datos del usuario, úsalos para personalizar tu respuesta.
+    
+    FORMATO DE RESPUESTA OBLIGATORIO — responde SIEMPRE con este JSON exacto:
+    {
+      "content": "tu respuesta aquí",
+      "actions": []
+    }
+    
+    ACCIONES DISPONIBLES — incluye en "actions" solo cuando sea relevante:
+    
+    Si el usuario quiere crear una rutina:
+    {
+      "type": "CREATE_ROUTINE",
+      "label": "Generar opciones de rutina",
+      "payload": {
+        "difficulty": "PRINCIPIANTE|INTERMEDIO|AVANZADO",
+        "muscleGroups": ["PECHO","ESPALDA","HOMBROS","BICEPS","TRICEPS","PIERNAS","GLUTEOS","CORE","CARDIO","CUERPO_COMPLETO"],
+        "availableEquipment": ["BARRA","MANCUERNAS","MAQUINA","POLEA","PESO_CORPORAL","BANDA_ELASTICA","KETTLEBELL"],
+        "durationMinutes": 45,
+        "limitations": "ninguna"
+      }
+    }
+    
+    Si el usuario quiere un plan de comidas:
+    {
+      "type": "GENERATE_MEAL_PLAN",
+      "label": "Generar plan de comidas",
+      "payload": {
+        "goal": "Ganar músculo|Bajar de peso|Mantener peso",
+        "preferences": [],
+        "allergies": [],
+        "likes": [],
+        "dislikes": []
+      }
+    }
+    
+    Si el usuario menciona que comió algo específico:
+    {
+      "type": "ADD_FOOD",
+      "label": "Registrar alimento",
+      "payload": {
+        "query": "nombre del alimento mencionado",
+        "quantity": 100,
+        "mealType": "DESAYUNO|ALMUERZO|CENA|SNACK"
+      }
+    }
+    
+    Si el usuario necesita motivación o apoyo emocional:
+    {
+      "type": "GET_MOTIVATION",
+      "label": "Obtener motivación personalizada",
+      "payload": { "contexto": "descripcion del contexto" }
+    }
+    
+    DISCLAIMER OBLIGATORIO — agrega siempre al final del content:
+    "\\n\\n⚠️ Esta información es orientativa y no reemplaza la consulta con un profesional certificado."
+    
+    IMPORTANTE: Responde SOLO el JSON. Sin texto adicional, sin bloques de código, sin markdown.
+    """;
 
     @CircuitBreaker(name = "vertex-ai", fallbackMethod = "chatFallback")
     @Retry(name = "vertex-ai")
@@ -54,14 +113,14 @@ public class AIService {
 
             String userContext = buildUserContext(userId);
 
-            // ← Validación de perfil incompleto
             if (userContext.equals("[PERFIL_NO_DISPONIBLE]")) {
                 return AIResponseDTO.builder()
-                        .response("Para acceder a M.I.A. necesitas completar tu " +
+                        .content("Para acceder a M.I.A. necesitas completar tu " +
                                 "perfil primero. Ve a configuración y completa " +
                                 "tu información personal.")
                         .model(model)
                         .status("PROFILE_INCOMPLETE")
+                        .actions(List.of())
                         .build();
             }
 
@@ -73,37 +132,73 @@ public class AIService {
 
             String fullMessage = userContext.isBlank()
                     ? message
-                    : userContext + "\n\nPregunta del usuario: " + message;
+                    : userContext + "\n\nMensaje del usuario: " + message;
 
-            String response = chatClient.prompt()
+            String rawResponse = chatClient.prompt()
                     .user(fullMessage)
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, userId))
                     .call()
                     .content();
 
-            String validatedResponse = validateOutput(response);
-
-            String finalResponse = deseudonimizar(validatedResponse);
-
             log.info("aiCall userId={} status={} model={}",
                     userId != null ? userId.substring(0, 8) + "..." : "unknown",
-                    "SUCCESS",
-                    model);
+                    "SUCCESS", model);
 
-            return AIResponseDTO.builder()
-                    .response(finalResponse)
-                    .model(model)
-                    .status("SUCCESS")
-                    .disclaimer("Esta rutina es orientativa y no reemplaza " +
-                            "la consulta con un profesional certificado.")
-                    .build();
+            return parseStructuredResponse(rawResponse, userId);
 
         } catch (Exception e) {
             log.error("Error al procesar mensaje: {}", e.getMessage());
             return AIResponseDTO.builder()
-                    .response("Error al procesar tu consulta.")
+                    .content("Error al procesar tu consulta.")
                     .model(model)
                     .status("ERROR")
+                    .actions(List.of())
+                    .build();
+        }
+    }
+    @SuppressWarnings("unchecked")
+    private AIResponseDTO parseStructuredResponse(String rawResponse, String userId) {
+        try {
+            String cleaned = rawResponse
+                    .replaceAll("(?s)```json\\s*", "")
+                    .replaceAll("(?s)```\\s*", "")
+                    .trim();
+
+            Map<String, Object> parsed = objectMapper.readValue(cleaned, Map.class);
+
+            String content = (String) parsed.getOrDefault("content", rawResponse);
+            content = deseudonimizar(validateOutput(content));
+
+            List<MiaAction> actions = new ArrayList<>();
+            Object actionsRaw = parsed.get("actions");
+            if (actionsRaw instanceof List<?> actionList) {
+                for (Object actionObj : actionList) {
+                    if (actionObj instanceof Map<?, ?> actionMap) {
+                        actions.add(MiaAction.builder()
+                                .type((String) actionMap.get("type"))
+                                .label((String) actionMap.get("label"))
+                                .payload(actionMap.get("payload"))
+                                .build());
+                    }
+                }
+            }
+
+            return AIResponseDTO.builder()
+                    .content(content)
+                    .model(model)
+                    .status("SUCCESS")
+                    .disclaimer("Esta información es orientativa y no reemplaza " +
+                            "la consulta con un profesional certificado.")
+                    .actions(actions)
+                    .build();
+
+        } catch (Exception e) {
+            log.warn("No se pudo parsear respuesta estructurada, retornando texto plano: {}", e.getMessage());
+            return AIResponseDTO.builder()
+                    .content(deseudonimizar(validateOutput(rawResponse)))
+                    .model(model)
+                    .status("SUCCESS")
+                    .actions(List.of())
                     .build();
         }
     }
@@ -129,9 +224,10 @@ public class AIService {
                 userId != null ? userId.substring(0, 8) + "..." : "unknown",
                 e.getMessage());
         return AIResponseDTO.builder()
-                .response("M.I.A. no está disponible en este momento. Intenta más tarde.")
+                .content("M.I.A. no está disponible en este momento. Intenta más tarde.")
                 .model("unavailable")
                 .status("CIRCUIT_OPEN")
+                .actions(List.of())
                 .build();
     }
 
