@@ -4,6 +4,7 @@ import com.iamfit.alimentacion.dto.*;
 import com.iamfit.alimentacion.service.FoodCatalogService;
 import com.iamfit.alimentacion.service.FoodLogService;
 import com.iamfit.alimentacion.service.NutritionService;
+import com.iamfit.alimentacion.service.MealPlannerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,29 +20,30 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/food-log")
+@RequestMapping("/api/v1/food")
 @RequiredArgsConstructor
 public class FoodController {
 
     private final FoodCatalogService foodCatalogService;
     private final FoodLogService foodLogService;
     private final NutritionService nutritionService;
+    private final MealPlannerService mealPlannerService;
 
     // ─── Catálogo ────────────────────────────────────────────────────
 
-    @GetMapping("/food/search")
+    @GetMapping("/search")
     public ResponseEntity<FoodSearchResponse> searchFood(
             @RequestParam String query) {
         return ResponseEntity.ok(foodCatalogService.search(query));
     }
 
-    @GetMapping("/food/category/{category}")
+    @GetMapping("/category/{category}")
     public ResponseEntity<List<FoodItemDto>> getByCategory(
             @PathVariable String category) {
         return ResponseEntity.ok(foodCatalogService.getByCategory(category));
     }
 
-    @GetMapping("/food/{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<FoodItemDto> getFoodById(
             @PathVariable UUID id) {
         return ResponseEntity.ok(foodCatalogService.getById(id));
@@ -83,5 +85,30 @@ public class FoodController {
             @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaim("userId");
         return ResponseEntity.ok(nutritionService.getDailySummary(userId, date));
+    }
+
+    // ─── Planificador de Comidas ─────────────────────────────────────
+
+    /**
+     * POST /api/v1/food/meal-plan/generate
+     *
+     * Generates a personalised weekly meal plan.
+     *
+     * Example body:
+     * {
+     * "goal": "Ganar músculo",
+     * "preferences": ["Alta proteína"],
+     * "allergies": ["mariscos"],
+     * "likes": ["pollo", "arroz", "huevos"],
+     * "dislikes": ["brócoli"]
+     * }
+     */
+    @PostMapping("/meal-plan/generate")
+    public ResponseEntity<MealPlanResponse> generateMealPlan(
+            @Valid @RequestBody UserPreferencesRequest request) {
+
+        log.info("Received meal plan request — goal: {}", request.getGoal());
+        MealPlanResponse response = mealPlannerService.generateMealPlan(request);
+        return ResponseEntity.ok(response);
     }
 }

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iamfit.ejercicios.dto.*;
 import com.iamfit.ejercicios.entity.*;
 import com.iamfit.ejercicios.entity.Exercise.MuscleGroup;
+import com.iamfit.ejercicios.exception.RoutineLimitReachedException;
+import com.iamfit.ejercicios.exception.RoutineSessionExpiredException;
 import com.iamfit.ejercicios.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,24 +95,43 @@ public class RoutineService {
 
     @Transactional
     public RoutineDto selectRoutine(String userId, SelectRoutineRequest request) {
+        log.debug("selectRoutine — userId={}, sessionId={}, selectedIndex={}, customName={}",
+                userId, request.getSessionId(), request.getSelectedIndex(), request.getCustomName());
+
+        // 1 — Verificar que la sesion existe
         List<RoutineDto> routines = generatedSessions.get(request.getSessionId());
-        if (routines == null) {
-            throw new RuntimeException("Sesión expirada o inválida. Genera las rutinas nuevamente.");
+        if (routines == null || routines.isEmpty()) {
+            log.warn("Sesion no encontrada o expirada — sessionId={}", request.getSessionId());
+            throw new RoutineSessionExpiredException(
+                    "La sesion de rutinas generadas expiro. Genera nuevas opciones.");
         }
 
-        // Verificar límite de 5 rutinas
+        log.debug("Sesion encontrada — {} opciones disponibles", routines.size());
+
+        // 2 — Verificar que el indice es valido
+        if (request.getSelectedIndex() >= routines.size()) {
+            log.warn("Indice invalido — selectedIndex={}, disponibles={}",
+                    request.getSelectedIndex(), routines.size());
+            throw new IllegalArgumentException(
+                    "Indice invalido. Debe ser entre 0 y " + (routines.size() - 1));
+        }
+
+        // 3 — Verificar limite de rutinas activas
         long activeRoutines = routineRepository.countByUserIdAndIsActiveTrue(userId);
+        log.debug("Rutinas activas actuales — userId={}, count={}", userId, activeRoutines);
         if (activeRoutines >= MAX_ROUTINES) {
-            throw new RuntimeException(
-                    "Has alcanzado el límite de " + MAX_ROUTINES + " rutinas activas. " +
-                            "Elimina una antes de agregar otra.");
+            log.warn("Limite de rutinas alcanzado — userId={}, count={}", userId, activeRoutines);
+            throw new RoutineLimitReachedException(
+                    "Has alcanzado el limite de " + MAX_ROUTINES +
+                            " rutinas activas. Desactiva una antes de agregar otra.");
         }
 
         RoutineDto selected = routines.get(request.getSelectedIndex());
         String routineName = request.getCustomName() != null && !request.getCustomName().isBlank()
                 ? request.getCustomName() : selected.getName();
 
-        // Guardar la rutina
+        log.debug("Guardando rutina — nombre={}", routineName);
+
         Routine routine = new Routine();
         routine.setUserId(userId);
         routine.setName(routineName);
@@ -121,19 +142,15 @@ public class RoutineService {
         routine.setIsActive(true);
 
         Routine saved = routineRepository.save(routine);
+        log.debug("Rutina guardada — id={}", saved.getId());
 
-        // Guardar ejercicios cruzando con el catálogo
-        List<RoutineExercise> exercises = buildRoutineExercises(
-                saved, selected.getExercises());
+        List<RoutineExercise> exercises = buildRoutineExercises(saved, selected.getExercises());
         routineExerciseRepository.saveAll(exercises);
         saved.setExercises(exercises);
 
-        // Limpiar sesión
         generatedSessions.remove(request.getSessionId());
 
-        log.info("Rutina seleccionada y guardada — id: {}, usuario: {}",
-                saved.getId(), userId);
-
+        log.info("Rutina seleccionada y guardada — id={}, userId={}", saved.getId(), userId);
         return toDto(saved);
     }
 
