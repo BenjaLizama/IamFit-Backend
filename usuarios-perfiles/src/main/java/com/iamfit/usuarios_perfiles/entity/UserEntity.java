@@ -61,35 +61,35 @@ public class UserEntity extends BaseEntity {
     @Column(name = "activity_level")
     private ActivityLevel activityLevel;
 
-    @ElementCollection
+    @Column(name = "limitations", length = 500)
+    private String limitations;
+
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "profile_dietary_preferences",
             joinColumns = @JoinColumn(name = "profile_id"))
     @Column(name = "preference")
     @Builder.Default
     private List<String> dietaryPreferences = new ArrayList<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "profile_allergies",
             joinColumns = @JoinColumn(name = "profile_id"))
     @Column(name = "allergy")
     @Builder.Default
     private List<String> allergies = new ArrayList<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "profile_dislikes",
             joinColumns = @JoinColumn(name = "profile_id"))
     @Column(name = "dislike")
     @Builder.Default
     private List<String> dislikes = new ArrayList<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "profile_equipment",
             joinColumns = @JoinColumn(name = "profile_id"))
     @Column(name = "equipment")
     @Builder.Default
     private List<String> availableEquipment = new ArrayList<>();
-
-    @Column(name = "limitations", length = 500)
-    private String limitations;
 
 }
