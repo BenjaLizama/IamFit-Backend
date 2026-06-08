@@ -33,22 +33,23 @@ public class AIController {
     @PostMapping("/prompt")
     public ResponseEntity<?> prompt(
             @RequestBody @Valid PromptRequestDTO request,
-            @AuthenticationPrincipal Jwt jwt) {
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestHeader("Authorization") String authHeader) {
 
         String userId = jwt.getClaim("userId");
+        String token = authHeader.replace("Bearer ", "");
 
-        // Rate limiting
         Bucket bucket = rateLimitConfig.resolveBucket(userId);
         if (!bucket.tryConsume(1)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of(
-                            "error", "Límite de consultas alcanzado",
-                            "message", "Has alcanzado el límite de 30 consultas por hora"
+                            "error", "Limite de consultas alcanzado",
+                            "message", "Has alcanzado el limite de 30 consultas por hora"
                     ));
         }
 
         String safeMessage = sanitize(request.getMessage());
-        AIResponseDTO response = aiService.chat(userId, safeMessage);
+        AIResponseDTO response = aiService.chat(userId, safeMessage, token);
         return ResponseEntity.ok(response);
     }
 

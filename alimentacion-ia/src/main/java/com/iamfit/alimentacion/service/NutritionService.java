@@ -1,6 +1,7 @@
 package com.iamfit.alimentacion.service;
 
 import com.iamfit.alimentacion.dto.FoodEntryDto;
+import com.iamfit.alimentacion.dto.FoodLimitsDto;
 import com.iamfit.alimentacion.dto.NutritionSummaryDto;
 import com.iamfit.alimentacion.entity.FoodEntry.MealType;
 import com.iamfit.alimentacion.repository.DailyLogRepository;
@@ -86,5 +87,19 @@ public class NutritionService {
 
     private double round(double value) {
         return Math.round(value * 100.0) / 100.0;
+    }
+
+    public FoodLimitsDto getFoodLimits(String userId, LocalDate date) {
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+        long entries = dailyLogRepository
+                .findByUserIdAndLogDate(userId, targetDate)
+                .map(log -> (long) log.getEntries().size())
+                .orElse(0L);
+        int max = 50;
+        return FoodLimitsDto.builder()
+                .maxFoodEntriesPerDay(max)
+                .entriesForDate(entries)
+                .canAddFood(entries < max)
+                .build();
     }
 }

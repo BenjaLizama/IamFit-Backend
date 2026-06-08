@@ -36,5 +36,10 @@ spring:
         enabled: true
       security:
         enabled: false
-
+iamfit:
+  services:
+    alimentacion:
+      base-url: http://alimentacion-app-local:8080
+    ejercicios:
+      base-url: http://ejercicios-app-local:8080
 RSA_PUBLIC: ${RSA_PUBLIC:}

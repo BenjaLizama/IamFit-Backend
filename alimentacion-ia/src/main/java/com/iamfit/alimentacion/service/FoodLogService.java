@@ -2,6 +2,7 @@ package com.iamfit.alimentacion.service;
 
 import com.iamfit.alimentacion.dto.AddFoodRequest;
 import com.iamfit.alimentacion.dto.DeleteFoodEntryResponse;
+import com.iamfit.alimentacion.dto.EditFoodEntryRequest;
 import com.iamfit.alimentacion.dto.FoodEntryDto;
 import com.iamfit.alimentacion.entity.DailyLog;
 import com.iamfit.alimentacion.entity.FoodEntry;
@@ -122,5 +123,36 @@ public class FoodLogService {
                 .fat(entry.getCalculatedFat())
                 .fiber(entry.getCalculatedFiber())
                 .build();
+    }
+
+    @Transactional
+    public FoodEntryDto editFood(String userId, UUID entryId, EditFoodEntryRequest request) {
+        FoodEntry entry = foodEntryRepository.findById(entryId)
+                .orElseThrow(() -> new RuntimeException("Registro no encontrado: " + entryId));
+
+        if (!entry.getDailyLog().getUserId().equals(userId)) {
+            throw new RuntimeException("No tienes permiso para editar este registro");
+        }
+
+        FoodItem foodItem = entry.getFoodItem();
+
+        if (request.getQuantity() != null && request.getQuantity() > 0) {
+            entry.setQuantity(request.getQuantity());
+            double factor = request.getQuantity() / 100.0;
+            entry.setCalculatedCalories(round(foodItem.getCalories() * factor));
+            entry.setCalculatedProtein(round(foodItem.getProtein() * factor));
+            entry.setCalculatedCarbs(round(foodItem.getCarbohydrates() * factor));
+            entry.setCalculatedFat(round(foodItem.getFat() * factor));
+            entry.setCalculatedFiber(foodItem.getFiber() != null
+                    ? round(foodItem.getFiber() * factor) : null);
+        }
+
+        if (request.getMealType() != null) {
+            entry.setMealType(request.getMealType());
+        }
+
+        FoodEntry saved = foodEntryRepository.save(entry);
+        log.info("Entrada editada — id: {}, usuario: {}", entryId, userId);
+        return toDto(saved);
     }
 }

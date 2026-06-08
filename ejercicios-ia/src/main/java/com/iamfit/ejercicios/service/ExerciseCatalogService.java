@@ -1,6 +1,7 @@
 package com.iamfit.ejercicios.service;
 
 import com.iamfit.ejercicios.dto.ExerciseDto;
+import com.iamfit.ejercicios.dto.ExerciseOptionsDto;
 import com.iamfit.ejercicios.entity.Exercise;
 import com.iamfit.ejercicios.entity.Exercise.DifficultyLevel;
 import com.iamfit.ejercicios.entity.Exercise.Equipment;
@@ -60,6 +61,14 @@ public class ExerciseCatalogService {
                 .defaultReps(exercise.getDefaultReps())
                 .defaultRestSeconds(exercise.getDefaultRestSeconds())
                 .videoUrl(exercise.getVideoUrl())
+                .build();
+    }
+
+    public ExerciseOptionsDto getOptions() {
+        return ExerciseOptionsDto.builder()
+                .muscleGroups(List.of(Exercise.MuscleGroup.values()))
+                .equipment(List.of(Exercise.Equipment.values()))
+                .difficultyLevels(List.of(Exercise.DifficultyLevel.values()))
                 .build();
     }
 }

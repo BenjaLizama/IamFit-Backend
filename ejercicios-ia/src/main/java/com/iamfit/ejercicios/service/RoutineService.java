@@ -31,6 +31,7 @@ public class RoutineService {
     private final ChatClient.Builder chatClientBuilder;
     private final ObjectMapper objectMapper;
 
+
     private static final int MAX_ROUTINES = 5;
 
     // Sesiones temporales de rutinas generadas (en memoria)
@@ -507,5 +508,107 @@ public class RoutineService {
         if (val instanceof Integer i) return i;
         try { return Integer.parseInt(val.toString()); }
         catch (Exception e) { return null; }
+    }
+
+    // ─── Filtrar rutinas por estado ──────────────────────────────────
+    public List<RoutineDto> getUserRoutines(String userId, String status) {
+        return switch (status.toUpperCase()) {
+            case "INACTIVE" -> routineRepository
+                    .findByUserIdAndIsActiveFalseOrderByCreatedAtDesc(userId)
+                    .stream().map(this::toDto).toList();
+            case "ALL" -> routineRepository
+                    .findByUserIdOrderByCreatedAtDesc(userId)
+                    .stream().map(this::toDto).toList();
+            default -> routineRepository
+                    .findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(userId)
+                    .stream().map(this::toDto).toList();
+        };
+    }
+
+    // ─── Actualizar metadata ─────────────────────────────────────────
+    @Transactional
+    public RoutineDto updateRoutine(String userId, UUID routineId,
+                                    UpdateRoutineRequest request) {
+        Routine routine = routineRepository.findByIdAndUserId(routineId, userId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada: " + routineId));
+
+        if (request.getName() != null && !request.getName().isBlank())
+            routine.setName(request.getName());
+        if (request.getDescription() != null)
+            routine.setDescription(request.getDescription());
+        if (request.getDifficultyLevel() != null)
+            routine.setDifficultyLevel(request.getDifficultyLevel());
+        if (request.getEstimatedDurationMinutes() != null)
+            routine.setEstimatedDurationMinutes(request.getEstimatedDurationMinutes());
+
+        return toDto(routineRepository.save(routine));
+    }
+
+    // ─── Activar rutina ──────────────────────────────────────────────
+    @Transactional
+    public RoutineDto activateRoutine(String userId, UUID routineId) {
+        Routine routine = routineRepository.findByIdAndUserId(routineId, userId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada: " + routineId));
+
+        long activeCount = routineRepository.countByUserIdAndIsActiveTrue(userId);
+        if (activeCount >= MAX_ROUTINES) {
+            throw new RoutineLimitReachedException(
+                    "Has alcanzado el limite de " + MAX_ROUTINES +
+                            " rutinas activas. Desactiva una antes de activar otra.");
+        }
+
+        routine.setIsActive(true);
+        log.info("Rutina activada — id: {}, usuario: {}", routineId, userId);
+        return toDto(routineRepository.save(routine));
+    }
+
+    // ─── Desactivar rutina ───────────────────────────────────────────
+    @Transactional
+    public RoutineDto deactivateRoutine(String userId, UUID routineId) {
+        Routine routine = routineRepository.findByIdAndUserId(routineId, userId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada: " + routineId));
+        routine.setIsActive(false);
+        log.info("Rutina desactivada — id: {}, usuario: {}", routineId, userId);
+        return toDto(routineRepository.save(routine));
+    }
+
+    // ─── Eliminar ejercicio de rutina ────────────────────────────────
+    @Transactional
+    public void deleteRoutineExercise(String userId, UUID routineId, UUID exerciseEntryId) {
+        Routine routine = routineRepository.findByIdAndUserId(routineId, userId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada"));
+        RoutineExercise re = routineExerciseRepository.findById(exerciseEntryId)
+                .orElseThrow(() -> new RuntimeException("Ejercicio no encontrado en rutina"));
+        if (!re.getRoutine().getId().equals(routine.getId()))
+            throw new IllegalArgumentException("El ejercicio no pertenece a esta rutina");
+        routineExerciseRepository.delete(re);
+        log.info("Ejercicio eliminado de rutina — exerciseEntryId: {}", exerciseEntryId);
+    }
+
+    // ─── Reordenar ejercicios ────────────────────────────────────────
+    @Transactional
+    public RoutineDto reorderExercises(String userId, UUID routineId,
+                                       List<ReorderExerciseRequest> request) {
+        Routine routine = routineRepository.findByIdAndUserId(routineId, userId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada"));
+        for (ReorderExerciseRequest r : request) {
+            routineExerciseRepository.findById(r.getExerciseEntryId()).ifPresent(re -> {
+                re.setOrderIndex(r.getNewOrderIndex());
+                routineExerciseRepository.save(re);
+            });
+        }
+        return toDto(routineRepository.findByIdAndUserId(routineId, userId).get());
+    }
+
+    // ─── Limites ─────────────────────────────────────────────────────
+    public RoutineLimitsDto getRoutineLimits(String userId) {
+        long active = routineRepository.countByUserIdAndIsActiveTrue(userId);
+        long inactive = routineRepository.countByUserIdAndIsActiveFalse(userId);
+        return RoutineLimitsDto.builder()
+                .maxActiveRoutines(MAX_ROUTINES)
+                .activeRoutines(active)
+                .inactiveRoutines(inactive)
+                .canCreateRoutine(active < MAX_ROUTINES)
+                .build();
     }
 }

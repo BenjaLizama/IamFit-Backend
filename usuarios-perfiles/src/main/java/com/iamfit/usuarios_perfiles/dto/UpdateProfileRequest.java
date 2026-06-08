@@ -2,21 +2,19 @@ package com.iamfit.usuarios_perfiles.dto;
 
 import com.iamfit.usuarios_perfiles.enums.ActivityLevel;
 import com.iamfit.usuarios_perfiles.enums.GoalType;
-import lombok.Builder;
+import com.iamfit.usuarios_perfiles.enums.SexType;
 import lombok.Data;
 import java.util.List;
 
 @Data
-@Builder
-public class UserProfileDTO {
-    private String credentialId;
+public class UpdateProfileRequest {
     private String nickname;
     private Integer age;
-    private Integer height;
+    private SexType sex;
     private Integer weight;
-    private String sex;
-    private String goal;
-    private String activityLevel;
+    private Integer height;
+    private GoalType goal;
+    private ActivityLevel activityLevel;
     private List<String> dietaryPreferences;
     private List<String> allergies;
     private List<String> dislikes;

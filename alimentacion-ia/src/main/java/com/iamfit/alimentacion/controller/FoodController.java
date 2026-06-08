@@ -1,10 +1,7 @@
 package com.iamfit.alimentacion.controller;
 
 import com.iamfit.alimentacion.dto.*;
-import com.iamfit.alimentacion.service.FoodCatalogService;
-import com.iamfit.alimentacion.service.FoodLogService;
-import com.iamfit.alimentacion.service.NutritionService;
-import com.iamfit.alimentacion.service.MealPlannerService;
+import com.iamfit.alimentacion.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +25,7 @@ public class FoodController {
     private final FoodLogService foodLogService;
     private final NutritionService nutritionService;
     private final MealPlannerService mealPlannerService;
+    private final MealPlanService mealPlanService;
 
     // ─── Catálogo ────────────────────────────────────────────────────
 
@@ -110,5 +108,80 @@ public class FoodController {
         log.info("Received meal plan request — goal: {}", request.getGoal());
         MealPlanResponse response = mealPlannerService.generateMealPlan(request);
         return ResponseEntity.ok(response);
+    }
+
+    // ─── Gestión de planes de comida ─────────────────────────────────
+
+    @PostMapping("/meal-plans")
+    public ResponseEntity<MealPlanDto> saveMealPlan(
+            @Valid @RequestBody SaveMealPlanRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealPlanService.saveMealPlan(userId, request));
+    }
+
+    @GetMapping("/meal-plans")
+    public ResponseEntity<List<MealPlanDto>> getMealPlans(
+            @RequestParam(required = false, defaultValue = "ALL") String status,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealPlanService.getMealPlans(userId, status));
+    }
+
+    @GetMapping("/meal-plans/active")
+    public ResponseEntity<MealPlanDto> getActiveMealPlan(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealPlanService.getActiveMealPlan(userId));
+    }
+
+    @PatchMapping("/meal-plans/{planId}/activate")
+    public ResponseEntity<MealPlanDto> activateMealPlan(
+            @PathVariable UUID planId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealPlanService.activateMealPlan(userId, planId));
+    }
+
+    @PatchMapping("/meal-plans/{planId}/deactivate")
+    public ResponseEntity<MealPlanDto> deactivateMealPlan(
+            @PathVariable UUID planId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealPlanService.deactivateMealPlan(userId, planId));
+    }
+
+    @DeleteMapping("/meal-plans/{planId}")
+    public ResponseEntity<Void> deleteMealPlan(
+            @PathVariable UUID planId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        mealPlanService.deleteMealPlan(userId, planId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/meal-plans/limits")
+    public ResponseEntity<MealPlanLimitsDto> getMealPlanLimits(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealPlanService.getLimits(userId));
+    }
+
+    @PatchMapping("/addFood/{entryId}")
+    public ResponseEntity<FoodEntryDto> editFood(
+            @PathVariable UUID entryId,
+            @RequestBody EditFoodEntryRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(foodLogService.editFood(userId, entryId, request));
+    }
+
+    @GetMapping("/limits")
+    public ResponseEntity<FoodLimitsDto> getFoodLimits(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(nutritionService.getFoodLimits(userId, date));
     }
 }

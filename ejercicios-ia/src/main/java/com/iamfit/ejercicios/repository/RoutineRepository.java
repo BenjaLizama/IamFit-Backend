@@ -16,4 +16,8 @@ public interface RoutineRepository extends JpaRepository<Routine, UUID> {
     long countByUserIdAndIsActiveTrue(String userId);
 
     Optional<Routine> findByIdAndUserId(UUID id, String userId);
+
+    List<Routine> findByUserIdAndIsActiveFalseOrderByCreatedAtDesc(String userId);
+    List<Routine> findByUserIdOrderByCreatedAtDesc(String userId);
+    long countByUserIdAndIsActiveFalse(String userId);
 }

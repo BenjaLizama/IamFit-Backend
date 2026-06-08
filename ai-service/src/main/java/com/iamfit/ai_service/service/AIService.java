@@ -30,6 +30,7 @@ public class AIService {
     private final ChatClient.Builder chatClientBuilder;
     private final UserProfileGrpcClient userProfileGrpcClient;
     private final ObjectMapper objectMapper;
+    private final InternalContextService internalContextService;
 
 
     @Value("${spring.ai.vertex.ai.gemini.chat.options.model}")
@@ -107,7 +108,7 @@ public class AIService {
 
     @CircuitBreaker(name = "vertex-ai", fallbackMethod = "chatFallback")
     @Retry(name = "vertex-ai")
-    public AIResponseDTO chat(String userId, String message) {
+    public AIResponseDTO chat(String userId, String message, String token) {
         try {
             log.info("Procesando mensaje de usuario: {}", userId);
 
@@ -116,13 +117,19 @@ public class AIService {
             if (userContext.equals("[PERFIL_NO_DISPONIBLE]")) {
                 return AIResponseDTO.builder()
                         .content("Para acceder a M.I.A. necesitas completar tu " +
-                                "perfil primero. Ve a configuración y completa " +
-                                "tu información personal.")
+                                "perfil primero. Ve a configuracion y completa " +
+                                "tu informacion personal.")
                         .model(model)
                         .status("PROFILE_INCOMPLETE")
                         .actions(List.of())
                         .build();
             }
+
+            // Contexto adicional de otros servicios
+            String nutritionContext = internalContextService.getNutritionContext(token);
+            String routinesContext = internalContextService.getRoutinesContext(token);
+            String routineLimits = internalContextService.getRoutineLimitsContext(token);
+            String mealPlanContext = internalContextService.getActiveMealPlanContext(token);
 
             ChatClient chatClient = chatClientBuilder
                     .defaultSystem(SYSTEM_PROMPT)
@@ -130,9 +137,12 @@ public class AIService {
                             .builder(MessageWindowChatMemory.builder().build()).build())
                     .build();
 
-            String fullMessage = userContext.isBlank()
-                    ? message
-                    : userContext + "\n\nMensaje del usuario: " + message;
+            String fullMessage = userContext
+                    + nutritionContext
+                    + routinesContext
+                    + routineLimits
+                    + mealPlanContext
+                    + "\n\nMensaje del usuario: " + message;
 
             String rawResponse = chatClient.prompt()
                     .user(fullMessage)
@@ -219,12 +229,12 @@ public class AIService {
         return texto;
     }
 
-    public AIResponseDTO chatFallback(String userId, String message, Exception e) {
+    public AIResponseDTO chatFallback(String userId, String message, String token, Exception e) {
         log.error("Circuit breaker activado para userId={}: {}",
                 userId != null ? userId.substring(0, 8) + "..." : "unknown",
                 e.getMessage());
         return AIResponseDTO.builder()
-                .content("M.I.A. no está disponible en este momento. Intenta más tarde.")
+                .content("M.I.A. no esta disponible en este momento. Intenta mas tarde.")
                 .model("unavailable")
                 .status("CIRCUIT_OPEN")
                 .actions(List.of())

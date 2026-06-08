@@ -54,6 +54,11 @@ iamfit:
   rabbitmq:
     queues:
       user-created: iamfit.user.created
+  services:
+    alimentacion:
+      base-url: http://localhost:8083
+    ejercicios:
+      base-url: http://localhost:8084
 
 grpc:
   client:

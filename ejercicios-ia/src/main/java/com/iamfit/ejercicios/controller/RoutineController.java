@@ -73,12 +73,7 @@ public class RoutineController {
 
     // ─── Gestión de rutinas ──────────────────────────────────────────
 
-    @GetMapping("/routines")
-    public ResponseEntity<List<RoutineDto>> getUserRoutines(
-            @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getClaim("userId");
-        return ResponseEntity.ok(routineService.getUserRoutines(userId));
-    }
+
 
     @GetMapping("/routines/{routineId}")
     public ResponseEntity<RoutineDto> getRoutineById(
@@ -138,5 +133,76 @@ public class RoutineController {
             @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaim("userId");
         return ResponseEntity.ok(routineService.getHistory(userId));
+    }
+
+    // ─── Filtrar por estado ──────────────────────────────────────────
+    @GetMapping("/routines")
+    public ResponseEntity<List<RoutineDto>> getUserRoutines(
+            @RequestParam(required = false, defaultValue = "ACTIVE") String status,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.getUserRoutines(userId, status));
+    }
+
+    // ─── Actualizar metadata ─────────────────────────────────────────
+    @PatchMapping("/routines/{routineId}")
+    public ResponseEntity<RoutineDto> updateRoutine(
+            @PathVariable UUID routineId,
+            @RequestBody UpdateRoutineRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.updateRoutine(userId, routineId, request));
+    }
+
+    // ─── Activar / Desactivar ────────────────────────────────────────
+    @PatchMapping("/routines/{routineId}/activate")
+    public ResponseEntity<RoutineDto> activateRoutine(
+            @PathVariable UUID routineId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.activateRoutine(userId, routineId));
+    }
+
+    @PatchMapping("/routines/{routineId}/deactivate")
+    public ResponseEntity<RoutineDto> deactivateRoutine(
+            @PathVariable UUID routineId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.deactivateRoutine(userId, routineId));
+    }
+
+    // ─── Eliminar ejercicio de rutina ────────────────────────────────
+    @DeleteMapping("/routines/{routineId}/exercises/{exerciseEntryId}")
+    public ResponseEntity<Void> deleteRoutineExercise(
+            @PathVariable UUID routineId,
+            @PathVariable UUID exerciseEntryId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        routineService.deleteRoutineExercise(userId, routineId, exerciseEntryId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ─── Reordenar ejercicios ────────────────────────────────────────
+    @PatchMapping("/routines/{routineId}/exercises/reorder")
+    public ResponseEntity<RoutineDto> reorderExercises(
+            @PathVariable UUID routineId,
+            @RequestBody List<ReorderExerciseRequest> request,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.reorderExercises(userId, routineId, request));
+    }
+
+    // ─── Limites ─────────────────────────────────────────────────────
+    @GetMapping("/routines/limits")
+    public ResponseEntity<RoutineLimitsDto> getRoutineLimits(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.getRoutineLimits(userId));
+    }
+
+    // ─── Opciones del catalogo ───────────────────────────────────────
+    @GetMapping("/exercises/options")
+    public ResponseEntity<ExerciseOptionsDto> getExerciseOptions() {
+        return ResponseEntity.ok(exerciseCatalogService.getOptions());
     }
 }

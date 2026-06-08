@@ -1,5 +1,7 @@
 package com.iamfit.usuarios_perfiles.entity;
 
+import com.iamfit.usuarios_perfiles.enums.ActivityLevel;
+import com.iamfit.usuarios_perfiles.enums.GoalType;
 import com.iamfit.usuarios_perfiles.enums.SexType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -50,5 +52,44 @@ public class UserEntity extends BaseEntity {
                 .user(this)
                 .build());
     }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "goal")
+    private GoalType goal;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "activity_level")
+    private ActivityLevel activityLevel;
+
+    @ElementCollection
+    @CollectionTable(name = "profile_dietary_preferences",
+            joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "preference")
+    @Builder.Default
+    private List<String> dietaryPreferences = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_allergies",
+            joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "allergy")
+    @Builder.Default
+    private List<String> allergies = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_dislikes",
+            joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "dislike")
+    @Builder.Default
+    private List<String> dislikes = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_equipment",
+            joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "equipment")
+    @Builder.Default
+    private List<String> availableEquipment = new ArrayList<>();
+
+    @Column(name = "limitations", length = 500)
+    private String limitations;
 
 }
