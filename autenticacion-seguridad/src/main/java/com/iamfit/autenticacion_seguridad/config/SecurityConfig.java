@@ -40,7 +40,7 @@ public class SecurityConfig {
                 // Configuracion de los permisos de rutas
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/h2-console/**").permitAll() // Libertad total
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**","/api/v1/auth/forgot-password/**").permitAll()
                         .requestMatchers("/api/v1/session/refresh-token").permitAll()
                         .requestMatchers("/api/v1/session/**").hasAnyAuthority("ROLE_USER", "READ_PRIVILEGE")
                         .anyRequest().authenticated()

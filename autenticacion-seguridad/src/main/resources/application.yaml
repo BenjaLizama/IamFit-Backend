@@ -13,7 +13,24 @@ spring:
           address: "static://127.0.0.1:9090"
           negotiation-type: plaintext
           use-direct-executor: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_USERNAME:}
+    password: ${GMAIL_APP_PASSWORD:}
+    properties:
+       mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
+  iamfit:
+    otp:
+      expiration-minutes: 10
+      max-attempts: 5
+      length: 6
   application:
     name: autenticacion-seguridad
 

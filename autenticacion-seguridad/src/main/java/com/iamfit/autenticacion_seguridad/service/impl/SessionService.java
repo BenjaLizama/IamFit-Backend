@@ -95,7 +95,7 @@ public class SessionService implements ISessionService {
                 .orElseThrow(() -> new CredentialNotFoundException("Usuario no encontrado."));
 
         // 422 contraseña incorrecta
-        if (!passwordEncoder.matches(request.oldPassword(), credential.getPassword())) {
+        if (!passwordEncoder.matches(request.currentPassword(), credential.getPassword())) {
             throw new InvalidPasswordException("La contraseña actual es incorrecta.");
         }
 
@@ -172,7 +172,6 @@ public class SessionService implements ISessionService {
         CredentialEntity credential = credentialRepository.findById(credentialId)
                 .orElseThrow(() -> new CredentialNotFoundException("Credencial no encontrada."));
 
-        // LEER SOLO DEL CONTEXTO (HEADER)
         String deviceId = ClientContextHolder.getDeviceId();
 
         if (deviceId == null || deviceId.isBlank()) {
@@ -180,11 +179,9 @@ public class SessionService implements ISessionService {
             throw new IllegalArgumentException("El header X-Device-ID es obligatorio.");
         }
 
-        // Limpiar sesión previa del mismo dispositivo
-        sessionRepository.findByCredentialAndDeviceId(credential, deviceId)
-                .ifPresent(sessionRepository::delete);
-
-        sessionRepository.flush();
+        // Eliminar sesión previa de forma segura usando query directa
+        // evita OptimisticLockException en requests concurrentes
+        safeDeleteExistingSession(credential, deviceId);
 
         String rawToken = UUID.randomUUID().toString();
         String hashedToken = tokenHashService.hash(rawToken);
@@ -194,7 +191,7 @@ public class SessionService implements ISessionService {
                 .refreshTokenHash(hashedToken)
                 .expiryDate(Instant.now().plusMillis(refreshTokenDurationMs))
                 .deviceId(deviceId)
-                .deviceName(sessionRequest.deviceName()) // El nombre (ej: "iPhone de Juan") sí puede venir del DTO
+                .deviceName(sessionRequest.deviceName())
                 .ipAddress(ClientContextHolder.getIp())
                 .userAgent(sanitizeUserAgent(ClientContextHolder.getUserAgent()))
                 .isActive(true)
@@ -202,6 +199,19 @@ public class SessionService implements ISessionService {
 
         sessionRepository.save(session);
         return new SessionResponse(rawToken, session.getExpiryDate(), session.getDeviceName());
+    }
+
+    private void safeDeleteExistingSession(CredentialEntity credential, String deviceId) {
+        try {
+            sessionRepository.findByCredentialAndDeviceId(credential, deviceId)
+                    .ifPresent(existing -> {
+                        sessionRepository.deleteById(existing.getId());
+                        sessionRepository.flush();
+                    });
+        } catch (Exception e) {
+            log.warn("[SESSION] Sesión previa ya eliminada por request concurrente — deviceId: {}. Continuando login.", deviceId);
+            // ignorar — otro request ya limpió la sesión
+        }
     }
 
     private String sanitizeUserAgent(String ua) {

@@ -14,7 +14,7 @@ class ChangePasswordRequestTest {
         ChangePasswordRequest request = new ChangePasswordRequest("OldPass123!", "NewPass123!");
 
         assertNotNull(request);
-        assertEquals("OldPass123!", request.oldPassword());
+        assertEquals("OldPass123!", request.currentPassword());
         assertEquals("NewPass123!", request.newPassword());
     }
 

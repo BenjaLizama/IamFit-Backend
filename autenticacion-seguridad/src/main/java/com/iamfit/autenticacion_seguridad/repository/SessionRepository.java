@@ -5,6 +5,7 @@ import com.iamfit.autenticacion_seguridad.entity.SessionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,12 @@ public interface SessionRepository extends JpaRepository<SessionEntity, UUID> {
 
     // Encuentra una sesión específica de un usuario en un dispositivo concreto
     Optional<SessionEntity> findByCredentialAndDeviceId(CredentialEntity credential, String deviceId);
+
+
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query("DELETE FROM SessionEntity s WHERE s.id = :id")
+    void deleteById(@Param("id") UUID id);
 
     @Modifying(clearAutomatically = true)
     @Transactional
