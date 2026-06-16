@@ -15,6 +15,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -204,5 +205,26 @@ public class RoutineController {
     @GetMapping("/exercises/options")
     public ResponseEntity<ExerciseOptionsDto> getExerciseOptions() {
         return ResponseEntity.ok(exerciseCatalogService.getOptions());
+    }
+
+    @GetMapping("/routines/history/monthly")
+    public ResponseEntity<List<Map<String, Object>>> getMonthlyWorkoutHistory(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.getMonthlyWorkoutSummary(userId));
+    }
+
+    @GetMapping("/routines/history/daily")
+    public ResponseEntity<List<Map<String, Object>>> getDailyWorkoutHistory(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.getDailyWorkoutSummary(userId));
+    }
+
+    @GetMapping("/routines/history/weekly")
+    public ResponseEntity<List<Map<String, Object>>> getWeeklyWorkoutHistory(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.getWeeklyWorkoutSummary(userId));
     }
 }

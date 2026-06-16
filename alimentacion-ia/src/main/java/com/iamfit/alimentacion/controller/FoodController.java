@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -183,5 +184,47 @@ public class FoodController {
             @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaim("userId");
         return ResponseEntity.ok(nutritionService.getFoodLimits(userId, date));
+    }
+
+    @GetMapping("/calories/monthly")
+    public ResponseEntity<List<Map<String, Object>>> getMonthlyCalories(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(nutritionService.getMonthlyCaloriesSummary(userId));
+    }
+
+    @GetMapping("/protein/monthly")
+    public ResponseEntity<List<Map<String, Object>>> getMonthlyProtein(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(nutritionService.getMonthlyProteinSummary(userId));
+    }
+
+    @GetMapping("/calories/daily")
+    public ResponseEntity<List<Map<String, Object>>> getDailyCalories(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(nutritionService.getDailyCaloriesSummary(userId));
+    }
+
+    @GetMapping("/calories/weekly")
+    public ResponseEntity<List<Map<String, Object>>> getWeeklyCalories(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(nutritionService.getWeeklyCaloriesSummary(userId));
+    }
+
+    @GetMapping("/protein/daily")
+    public ResponseEntity<List<Map<String, Object>>> getDailyProtein(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(nutritionService.getDailyProteinSummary(userId));
+    }
+
+    @GetMapping("/protein/weekly")
+    public ResponseEntity<List<Map<String, Object>>> getWeeklyProtein(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(nutritionService.getWeeklyProteinSummary(userId));
     }
 }

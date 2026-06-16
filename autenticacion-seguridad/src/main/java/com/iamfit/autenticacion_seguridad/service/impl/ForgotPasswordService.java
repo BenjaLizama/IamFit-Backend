@@ -27,14 +27,12 @@ public class ForgotPasswordService {
     // ─── Solicitar código OTP ────────────────────────────────────────
 
     public PasswordResetResponseDto requestOtp(ForgotPasswordRequestDto request) {
-        // Por seguridad siempre retorna éxito aunque el email no exista
-        boolean emailExists = credentialRepository.existsByEmail(request.email());
+        String normalizedEmail = request.email().toLowerCase().trim();
+        boolean emailExists = credentialRepository.existsByEmail(normalizedEmail);
 
         if (emailExists) {
-            String otp = otpService.generateAndSaveOtp(request.email());
-            emailService.sendOtpEmail(request.email(), otp, expirationMinutes);
-        } else {
-            log.info("[FORGOT-PASSWORD] Email no registrado: {} — respuesta neutral", request.email());
+            String otp = otpService.generateAndSaveOtp(normalizedEmail);
+            emailService.sendOtpEmail(normalizedEmail, otp, expirationMinutes);
         }
 
         return new PasswordResetResponseDto("SUCCESS", "Si el correo está registrado, recibirás un código en breve.");

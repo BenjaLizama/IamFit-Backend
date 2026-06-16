@@ -611,4 +611,59 @@ public class RoutineService {
                 .canCreateRoutine(active < MAX_ROUTINES)
                 .build();
     }
+
+    public List<Map<String, Object>> getMonthlyWorkoutSummary(String userId) {
+        List<WorkoutHistory> history = workoutHistoryRepository
+                .findByUserIdOrderByWorkoutDateDesc(userId);
+
+        java.util.Map<String, Long> countByMonth = new java.util.LinkedHashMap<>();
+        for (WorkoutHistory w : history) {
+            if (w.getWorkoutDate() != null) {
+                String month = w.getWorkoutDate().toString().substring(0, 7);
+                countByMonth.merge(month, 1L, Long::sum);
+            }
+        }
+
+        return countByMonth.entrySet().stream()
+                .sorted(java.util.Map.Entry.comparingByKey())
+                .map(e -> Map.<String, Object>of(
+                        "month", e.getKey(),
+                        "count", e.getValue()
+                ))
+                .toList();
+    }
+
+    public List<Map<String, Object>> getDailyWorkoutSummary(String userId) {
+        List<WorkoutHistory> history = workoutHistoryRepository
+                .findByUserIdOrderByWorkoutDateDesc(userId);
+        java.time.LocalDate cutoff = java.time.LocalDate.now().minusDays(30);
+
+        return history.stream()
+                .filter(w -> w.getWorkoutDate() != null && !w.getWorkoutDate().isBefore(cutoff))
+                .map(w -> Map.<String, Object>of(
+                        "date", w.getWorkoutDate().toString(),
+                        "count", 1,
+                        "routineName", w.getRoutine().getName()
+                ))
+                .toList();
+    }
+
+    public List<Map<String, Object>> getWeeklyWorkoutSummary(String userId) {
+        List<WorkoutHistory> history = workoutHistoryRepository
+                .findByUserIdOrderByWorkoutDateDesc(userId);
+        java.time.LocalDate cutoff = java.time.LocalDate.now().minusWeeks(12);
+
+        java.util.Map<String, Long> byWeek = new java.util.LinkedHashMap<>();
+        for (WorkoutHistory w : history) {
+            if (w.getWorkoutDate() == null || w.getWorkoutDate().isBefore(cutoff)) continue;
+            int week = w.getWorkoutDate().get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+            String key = "W" + String.format("%02d", week);
+            byWeek.merge(key, 1L, Long::sum);
+        }
+
+        return byWeek.entrySet().stream()
+                .sorted(java.util.Map.Entry.comparingByKey())
+                .map(e -> Map.<String, Object>of("week", e.getKey(), "count", e.getValue()))
+                .toList();
+    }
 }

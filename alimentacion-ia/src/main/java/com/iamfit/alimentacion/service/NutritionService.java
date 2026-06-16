@@ -3,6 +3,7 @@ package com.iamfit.alimentacion.service;
 import com.iamfit.alimentacion.dto.FoodEntryDto;
 import com.iamfit.alimentacion.dto.FoodLimitsDto;
 import com.iamfit.alimentacion.dto.NutritionSummaryDto;
+import com.iamfit.alimentacion.entity.DailyLog;
 import com.iamfit.alimentacion.entity.FoodEntry.MealType;
 import com.iamfit.alimentacion.repository.DailyLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -101,5 +102,135 @@ public class NutritionService {
                 .entriesForDate(entries)
                 .canAddFood(entries < max)
                 .build();
+    }
+
+    public List<Map<String, Object>> getMonthlyCaloriesSummary(String userId) {
+        List<DailyLog> logs = dailyLogRepository.findByUserIdOrderByLogDate(userId);
+
+        java.util.Map<String, Double> caloriesByMonth = new java.util.LinkedHashMap<>();
+
+        for (DailyLog log : logs) {
+            if (log.getLogDate() != null) {
+                String month = log.getLogDate().toString().substring(0, 7);
+                double totalCalories = log.getEntries().stream()
+                        .mapToDouble(e -> e.getCalculatedCalories() != null
+                                ? e.getCalculatedCalories() : 0.0)
+                        .sum();
+                caloriesByMonth.merge(month, totalCalories, Double::sum);
+            }
+        }
+
+        return caloriesByMonth.entrySet().stream()
+                .map(e -> Map.<String, Object>of(
+                        "month", e.getKey(),
+                        "totalCalories", Math.round(e.getValue() * 100.0) / 100.0
+                ))
+                .toList();
+    }
+
+    public List<Map<String, Object>> getMonthlyProteinSummary(String userId) {
+        List<DailyLog> logs = dailyLogRepository.findByUserIdOrderByLogDate(userId);
+
+        java.util.Map<String, Double> proteinByMonth = new java.util.LinkedHashMap<>();
+
+        for (DailyLog log : logs) {
+            if (log.getLogDate() != null) {
+                String month = log.getLogDate().toString().substring(0, 7);
+                double totalProtein = log.getEntries().stream()
+                        .mapToDouble(e -> e.getCalculatedProtein() != null
+                                ? e.getCalculatedProtein() : 0.0)
+                        .sum();
+                proteinByMonth.merge(month, totalProtein, Double::sum);
+            }
+        }
+
+        return proteinByMonth.entrySet().stream()
+                .map(e -> Map.<String, Object>of(
+                        "month", e.getKey(),
+                        "totalProtein", Math.round(e.getValue() * 100.0) / 100.0
+                ))
+                .toList();
+    }
+
+    public List<Map<String, Object>> getDailyCaloriesSummary(String userId) {
+        List<DailyLog> logs = dailyLogRepository.findByUserIdOrderByLogDate(userId);
+        java.time.LocalDate cutoff = java.time.LocalDate.now().minusDays(30);
+
+        return logs.stream()
+                .filter(log -> log.getLogDate() != null && !log.getLogDate().isBefore(cutoff))
+                .map(log -> {
+                    double total = log.getEntries().stream()
+                            .mapToDouble(e -> e.getCalculatedCalories() != null ? e.getCalculatedCalories() : 0.0)
+                            .sum();
+                    return Map.<String, Object>of(
+                            "date", log.getLogDate().toString(),
+                            "totalCalories", Math.round(total * 100.0) / 100.0
+                    );
+                })
+                .toList();
+    }
+
+    public List<Map<String, Object>> getWeeklyCaloriesSummary(String userId) {
+        List<DailyLog> logs = dailyLogRepository.findByUserIdOrderByLogDate(userId);
+        java.time.LocalDate cutoff = java.time.LocalDate.now().minusWeeks(12);
+
+        java.util.Map<String, Double> byWeek = new java.util.LinkedHashMap<>();
+        for (DailyLog log : logs) {
+            if (log.getLogDate() == null || log.getLogDate().isBefore(cutoff)) continue;
+            int week = log.getLogDate().get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+            String key = "W" + String.format("%02d", week);
+            double total = log.getEntries().stream()
+                    .mapToDouble(e -> e.getCalculatedCalories() != null ? e.getCalculatedCalories() : 0.0)
+                    .sum();
+            byWeek.merge(key, total, Double::sum);
+        }
+
+        return byWeek.entrySet().stream()
+                .map(e -> Map.<String, Object>of(
+                        "week", e.getKey(),
+                        "totalCalories", Math.round(e.getValue() * 100.0) / 100.0
+                ))
+                .toList();
+    }
+
+    public List<Map<String, Object>> getDailyProteinSummary(String userId) {
+        List<DailyLog> logs = dailyLogRepository.findByUserIdOrderByLogDate(userId);
+        java.time.LocalDate cutoff = java.time.LocalDate.now().minusDays(30);
+
+        return logs.stream()
+                .filter(log -> log.getLogDate() != null && !log.getLogDate().isBefore(cutoff))
+                .map(log -> {
+                    double total = log.getEntries().stream()
+                            .mapToDouble(e -> e.getCalculatedProtein() != null ? e.getCalculatedProtein() : 0.0)
+                            .sum();
+                    return Map.<String, Object>of(
+                            "date", log.getLogDate().toString(),
+                            "totalProtein", Math.round(total * 100.0) / 100.0
+                    );
+                })
+                .toList();
+    }
+
+    public List<Map<String, Object>> getWeeklyProteinSummary(String userId) {
+        List<DailyLog> logs = dailyLogRepository.findByUserIdOrderByLogDate(userId);
+        java.time.LocalDate cutoff = java.time.LocalDate.now().minusWeeks(12);
+
+        java.util.Map<String, Double> byWeek = new java.util.LinkedHashMap<>();
+        for (DailyLog log : logs) {
+            if (log.getLogDate() == null || log.getLogDate().isBefore(cutoff)) continue;
+            int week = log.getLogDate().get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+            String key = "W" + String.format("%02d", week);
+            double total = log.getEntries().stream()
+                    .mapToDouble(e -> e.getCalculatedProtein() != null ? e.getCalculatedProtein() : 0.0)
+                    .sum();
+            byWeek.merge(key, total, Double::sum);
+        }
+
+        return byWeek.entrySet().stream()
+                .map(e -> Map.<String, Object>of(
+                        "week", e.getKey(),
+                        "totalProtein", Math.round(e.getValue() * 100.0) / 100.0
+                ))
+                .toList();
     }
 }

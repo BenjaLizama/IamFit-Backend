@@ -1,8 +1,6 @@
 package com.iamfit.usuarios_perfiles.controller;
 
-import com.iamfit.usuarios_perfiles.dto.ProfileContextDTO;
-import com.iamfit.usuarios_perfiles.dto.UpdateProfileRequest;
-import com.iamfit.usuarios_perfiles.dto.UserProfileDTO;
+import com.iamfit.usuarios_perfiles.dto.*;
 import com.iamfit.usuarios_perfiles.service.ProfileContextService;
 import com.iamfit.usuarios_perfiles.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
@@ -72,5 +70,31 @@ public class UserController {
         log.info("Eliminando perfil para userId: {}", userId);
         userProfileService.deleteProfile(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/profile/summary")
+    public ResponseEntity<ProfileSummaryDto> getProfileSummary(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        return ResponseEntity.ok(profileContextService.buildSummary(token));
+    }
+
+    @GetMapping("/profile/activity")
+    public ResponseEntity<ActivityChartDto> getProfileActivity(
+            @RequestParam(required = false, defaultValue = "WORKOUTS") String type,
+            @RequestParam(required = false, defaultValue = "MONTHLY") String period,
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(profileContextService.buildActivityChart(token, userId, type, period));
+    }
+
+    @GetMapping("/profile/active-items")
+    public ResponseEntity<ActiveItemsDto> getActiveItems(
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        return ResponseEntity.ok(profileContextService.buildActiveItems(token));
     }
 }
