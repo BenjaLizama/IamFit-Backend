@@ -266,7 +266,11 @@ public class ProfileContextService {
 
         return ActivityChartDto.builder()
                 .type(type).period(period)
-                .unit(unit).label(label + " por " + period.toLowerCase())
+                .label(label + " — " + switch (period) {
+                    case "DAILY" -> "ultimos 30 dias";
+                    case "WEEKLY" -> "ultimas 12 semanas";
+                    default -> "por mes";
+                })
                 .points(points).highlight(highlight).build();
     }
 
