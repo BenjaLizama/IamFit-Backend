@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
@@ -94,20 +95,29 @@ class FoodCatalogServiceTest {
 
         when(foodItemRepository.searchByNameOrNameEn("pollo")).thenReturn(List.of());
 
-        WebClient webClient = mock(WebClient.class, RETURNS_DEEP_STUBS);
+        // Desarmamos la cadena del WebClient para evitar el NPE
+        WebClient webClient = mock(WebClient.class);
+        WebClient.RequestHeadersUriSpec uriSpec = mock(WebClient.RequestHeadersUriSpec.class);
+        WebClient.RequestHeadersSpec headersSpec = mock(WebClient.RequestHeadersSpec.class);
+        WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
+        Mono mono = mock(Mono.class);
+
         when(webClientBuilder.build()).thenReturn(webClient);
+        when(webClient.get()).thenReturn(uriSpec);
+        when(uriSpec.uri(anyString())).thenReturn(headersSpec);
+        // Usamos any(String[].class) para el vararg
+        when(headersSpec.header(anyString(), any(String[].class))).thenReturn(headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(Map.class)).thenReturn(mono);
+
         Map<String, Object> external = Map.of("items", List.of(Map.of(
                 "name", "egg",
                 "calories", 155,
                 "protein_g", 13.0,
                 "carbohydrates_total_g", 1.1,
                 "fat_total_g", 11.0)));
-        when(webClient.get()
-                .uri(anyString())
-                .header(anyString(), anyString())
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block()).thenReturn((Map) external);
+
+        when(mono.block()).thenReturn(external);
         when(foodItemRepository.existsByExternalId(anyString())).thenReturn(false);
 
         FoodSearchResponse response = service.search("pollo");
@@ -122,17 +132,25 @@ class FoodCatalogServiceTest {
     @Test
     void search_externalApiError_returnsEmptyExternal() {
         ReflectionTestUtils.setField(service, "calorieNinjasApiKey", "secret");
+        ReflectionTestUtils.setField(service, "calorieNinjasBaseUrl", "http://api");
 
         when(foodItemRepository.searchByNameOrNameEn("pollo")).thenReturn(List.of());
 
-        WebClient webClient = mock(WebClient.class, RETURNS_DEEP_STUBS);
+        // Mismos mocks explícitos para el test de error
+        WebClient webClient = mock(WebClient.class);
+        WebClient.RequestHeadersUriSpec uriSpec = mock(WebClient.RequestHeadersUriSpec.class);
+        WebClient.RequestHeadersSpec headersSpec = mock(WebClient.RequestHeadersSpec.class);
+        WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
+        Mono mono = mock(Mono.class);
+
         when(webClientBuilder.build()).thenReturn(webClient);
-        when(webClient.get()
-                .uri(anyString())
-                .header(anyString(), anyString())
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block()).thenThrow(new RuntimeException("boom"));
+        when(webClient.get()).thenReturn(uriSpec);
+        when(uriSpec.uri(anyString())).thenReturn(headersSpec);
+        when(headersSpec.header(anyString(), any(String[].class))).thenReturn(headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(Map.class)).thenReturn(mono);
+
+        when(mono.block()).thenThrow(new RuntimeException("boom"));
 
         FoodSearchResponse response = service.search("pollo");
 

@@ -9,7 +9,10 @@ import com.iamfit.alimentacion.repository.FoodEntryRepository;
 import com.iamfit.alimentacion.repository.FoodItemRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -17,7 +20,18 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@TestPropertySource(properties = {
+        "spring.sql.init.mode=never",
+        "spring.datasource.url=jdbc:h2:mem:iamfit_testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false",
+        "spring.datasource.driverClassName=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
 class FoodLogPersistenceIntegrationTest {
+
+    @Autowired
+    private TestEntityManager entityManager; // <-- Inyectamos el manejador de caché
 
     @Autowired
     private FoodItemRepository foodItemRepository;
@@ -50,6 +64,12 @@ class FoodLogPersistenceIntegrationTest {
         entry.setMealType(MealType.DESAYUNO);
         entry.setCalculatedCalories(194.5);
         foodEntryRepository.save(entry);
+
+        // --- EL TRUCO MAGICO ---
+        // Sincroniza los datos hacia H2 y borra el caché de memoria
+        entityManager.flush();
+        entityManager.clear();
+        // -----------------------
 
         Optional<DailyLog> found =
                 dailyLogRepository.findByUserIdAndLogDate("user-1", LocalDate.of(2024, 1, 10));
