@@ -27,6 +27,8 @@ public class FoodController {
     private final NutritionService nutritionService;
     private final MealPlannerService mealPlannerService;
     private final MealPlanService mealPlanService;
+    private final MealCompletionService mealCompletionService;
+
 
     // ─── Catálogo ────────────────────────────────────────────────────
 
@@ -226,5 +228,57 @@ public class FoodController {
             @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaim("userId");
         return ResponseEntity.ok(nutritionService.getWeeklyProteinSummary(userId));
+    }
+
+    // ─── Progreso y completado de plan de comidas ───────────────────────
+
+    @GetMapping("/meal-plans/active/progress")
+    public ResponseEntity<MealPlanProgressResponse> getActivePlanProgress(
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealCompletionService.getActivePlanProgress(userId));
+    }
+
+    @PatchMapping("/meal-plans/{planId}/days/{day}/meals/{mealId}/consume")
+    public ResponseEntity<MealCompletionResponse> consumeMeal(
+            @PathVariable UUID planId,
+            @PathVariable String day,
+            @PathVariable String mealId,
+            @RequestBody(required = false) ConsumeMealRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        ConsumeMealRequest safeRequest = request != null ? request : new ConsumeMealRequest(null, false);
+        return ResponseEntity.ok(mealCompletionService.consumeMeal(userId, planId, day, mealId, safeRequest));
+    }
+
+    @PatchMapping("/meal-plans/{planId}/days/{day}/meals/{mealId}/unconsume")
+    public ResponseEntity<MealCompletionResponse> unconsumeMeal(
+            @PathVariable UUID planId,
+            @PathVariable String day,
+            @PathVariable String mealId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealCompletionService.unconsumeMeal(userId, planId, day, mealId));
+    }
+
+    @PatchMapping("/meal-plans/{planId}/days/{day}/complete")
+    public ResponseEntity<MealPlanDayCompleteResponse> completeDay(
+            @PathVariable UUID planId,
+            @PathVariable String day,
+            @RequestBody(required = false) CompleteMealPlanDayRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        CompleteMealPlanDayRequest safeRequest = request != null
+                ? request : new CompleteMealPlanDayRequest(null, true, false);
+        return ResponseEntity.ok(mealCompletionService.completeDay(userId, planId, day, safeRequest));
+    }
+
+    @GetMapping("/meal-plans/history")
+    public ResponseEntity<MealPlanHistoryResponse> getMealPlanHistory(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealCompletionService.getHistory(userId, from, to));
     }
 }

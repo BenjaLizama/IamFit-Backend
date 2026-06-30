@@ -4,8 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iamfit.ejercicios.dto.*;
 import com.iamfit.ejercicios.entity.*;
 import com.iamfit.ejercicios.entity.Exercise.MuscleGroup;
-import com.iamfit.ejercicios.exception.RoutineLimitReachedException;
-import com.iamfit.ejercicios.exception.RoutineSessionExpiredException;
+import com.iamfit.ejercicios.exception.*;
 import com.iamfit.ejercicios.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +29,8 @@ public class RoutineService {
     private final ExerciseCatalogService exerciseCatalogService;
     private final ChatClient.Builder chatClientBuilder;
     private final ObjectMapper objectMapper;
+    private final WorkoutSessionRepository workoutSessionRepository;
+    private final WorkoutSessionExerciseRepository workoutSessionExerciseRepository;
 
 
     private static final int MAX_ROUTINES = 5;
@@ -665,5 +666,195 @@ public class RoutineService {
                 .sorted(java.util.Map.Entry.comparingByKey())
                 .map(e -> Map.<String, Object>of("week", e.getKey(), "count", e.getValue()))
                 .toList();
+    }
+
+    @Transactional
+    public WorkoutSessionDto startSession(String userId, UUID routineId, StartSessionRequest request) {
+        Routine routine = routineRepository.findByIdAndUserId(routineId, userId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada: " + routineId));
+
+        if (!Boolean.TRUE.equals(routine.getIsActive())) {
+            throw new RoutineNotActiveException("La rutina no esta activa.");
+        }
+
+        WorkoutSession session = new WorkoutSession();
+        session.setUserId(userId);
+        session.setRoutine(routine);
+        session.setSessionDate(request.date() != null ? request.date() : java.time.LocalDate.now());
+
+        WorkoutSession saved = workoutSessionRepository.save(session);
+        log.info("Sesion de entrenamiento iniciada — id: {}, rutina: {}", saved.getId(), routineId);
+
+        return WorkoutSessionDto.builder()
+                .sessionId(saved.getId())
+                .routineId(routineId)
+                .status(saved.getStatus())
+                .startedAt(saved.getStartedAt())
+                .build();
+    }
+
+// ─── Completar ejercicio dentro de una sesion ────────────────────
+
+    @Transactional
+    public SessionExerciseCompletionDto completeSessionExercise(
+            String userId, UUID routineId, UUID sessionId, UUID exerciseEntryId,
+            CompleteSessionExerciseRequest request) {
+
+        WorkoutSession session = workoutSessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new WorkoutSessionNotFoundException(
+                        "Sesion de entrenamiento no encontrada: " + sessionId));
+
+        if (!session.getRoutine().getId().equals(routineId)) {
+            throw new IllegalArgumentException("La sesion no pertenece a esta rutina.");
+        }
+
+        RoutineExercise re = routineExerciseRepository.findById(exerciseEntryId)
+                .orElseThrow(() -> new RuntimeException("Ejercicio no encontrado en la rutina"));
+
+        WorkoutSessionExercise completion = workoutSessionExerciseRepository
+                .findBySessionIdAndRoutineExerciseId(sessionId, exerciseEntryId)
+                .orElseGet(() -> {
+                    WorkoutSessionExercise wse = new WorkoutSessionExercise();
+                    wse.setSession(session);
+                    wse.setRoutineExercise(re);
+                    return wse;
+                });
+
+        if (Boolean.TRUE.equals(completion.getCompleted())) {
+            throw new ExerciseAlreadyCompletedException("Este ejercicio ya fue marcado como completado.");
+        }
+
+        completion.setCompleted(true);
+        completion.setSetsCompleted(request.setsCompleted());
+        completion.setRepsCompleted(request.repsCompleted());
+        completion.setWeightUsed(request.weightUsed());
+        completion.setNotes(request.notes());
+        completion.setCompletedAt(java.time.LocalDateTime.now());
+
+        workoutSessionExerciseRepository.save(completion);
+        log.info("Ejercicio completado — sessionId: {}, exerciseEntryId: {}", sessionId, exerciseEntryId);
+
+        return SessionExerciseCompletionDto.builder()
+                .sessionId(sessionId).exerciseEntryId(exerciseEntryId)
+                .completed(true).completedAt(completion.getCompletedAt())
+                .build();
+    }
+
+// ─── Deshacer completado de ejercicio ────────────────────────────
+
+    @Transactional
+    public SessionExerciseCompletionDto uncompleteSessionExercise(
+            String userId, UUID routineId, UUID sessionId, UUID exerciseEntryId) {
+
+        WorkoutSession session = workoutSessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new WorkoutSessionNotFoundException(
+                        "Sesion de entrenamiento no encontrada: " + sessionId));
+
+        WorkoutSessionExercise completion = workoutSessionExerciseRepository
+                .findBySessionIdAndRoutineExerciseId(sessionId, exerciseEntryId)
+                .filter(WorkoutSessionExercise::getCompleted)
+                .orElseThrow(() -> new ExerciseNotCompletedException(
+                        "Este ejercicio no ha sido completado."));
+
+        completion.setCompleted(false);
+        completion.setCompletedAt(null);
+        workoutSessionExerciseRepository.save(completion);
+
+        return SessionExerciseCompletionDto.builder()
+                .sessionId(sessionId).exerciseEntryId(exerciseEntryId).completed(false).build();
+    }
+
+// ─── Historial mejorado (reemplaza logWorkout actual) ────────────
+
+    @Transactional
+    public WorkoutHistoryDto logWorkout(String userId, UUID routineId, LogWorkoutRequest request) {
+        Routine routine = routineRepository.findByIdAndUserId(routineId, userId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada"));
+
+        java.time.LocalDate workoutDate = request.date() != null ? request.date() : java.time.LocalDate.now();
+
+        WorkoutHistory history = workoutHistoryRepository
+                .findByUserIdAndWorkoutDate(userId, workoutDate)
+                .orElseGet(() -> {
+                    WorkoutHistory h = new WorkoutHistory();
+                    h.setUserId(userId);
+                    h.setWorkoutDate(workoutDate);
+                    return h;
+                });
+
+        history.setRoutine(routine);
+        history.setStatus(WorkoutHistory.WorkoutStatus.COMPLETADO);
+        history.setCompletedAt(java.time.LocalDateTime.now());
+        history.setNotes(request.notes());
+
+        WorkoutHistory saved = workoutHistoryRepository.save(history);
+
+        // Marcar la sesion IN_PROGRESS mas reciente como COMPLETED, si existe
+        workoutSessionRepository
+                .findByRoutineIdAndUserIdAndStatus(routineId, userId, WorkoutSession.SessionStatus.IN_PROGRESS)
+                .ifPresent(session -> {
+                    session.setStatus(WorkoutSession.SessionStatus.COMPLETED);
+                    session.setCompletedAt(java.time.LocalDateTime.now());
+                    workoutSessionRepository.save(session);
+                });
+
+        int totalExercises = routine.getExercises().size();
+        int completedExercises = request.completedExerciseIds() != null
+                ? request.completedExerciseIds().size() : totalExercises;
+
+        log.info("Entrenamiento registrado — usuario: {}, rutina: {}, ejercicios: {}/{}",
+                userId, routineId, completedExercises, totalExercises);
+
+        return toHistoryDto(saved);
+    }
+
+// ─── Progreso de una rutina ───────────────────────────────────────
+
+    public RoutineProgressDto getRoutineProgress(String userId, UUID routineId) {
+        routineRepository.findByIdAndUserId(routineId, userId)
+                .orElseThrow(() -> new RuntimeException("Rutina no encontrada: " + routineId));
+
+        List<WorkoutHistory> history = workoutHistoryRepository
+                .findByUserIdOrderByWorkoutDateDesc(userId).stream()
+                .filter(h -> h.getRoutine().getId().equals(routineId))
+                .filter(h -> h.getStatus() == WorkoutHistory.WorkoutStatus.COMPLETADO)
+                .toList();
+
+        long completedWorkouts = history.size();
+        java.time.LocalDateTime lastCompletedAt = history.isEmpty() ? null
+                : history.get(0).getCompletedAt();
+
+        int currentStreak = calculateStreak(history);
+
+        java.time.LocalDate weekAgo = java.time.LocalDate.now().minusDays(7);
+        long completedThisWeek = history.stream()
+                .filter(h -> !h.getWorkoutDate().isBefore(weekAgo))
+                .count();
+        int weeklyPercentage = (int) Math.min(100, completedThisWeek * 100 / 7);
+
+        return RoutineProgressDto.builder()
+                .routineId(routineId)
+                .completedWorkouts(completedWorkouts)
+                .currentStreak(currentStreak)
+                .lastCompletedAt(lastCompletedAt)
+                .weeklyCompletionPercentage(weeklyPercentage)
+                .build();
+    }
+
+    private int calculateStreak(List<WorkoutHistory> sortedDescHistory) {
+        if (sortedDescHistory.isEmpty()) return 0;
+
+        int streak = 0;
+        java.time.LocalDate expected = java.time.LocalDate.now();
+
+        for (WorkoutHistory h : sortedDescHistory) {
+            if (h.getWorkoutDate().equals(expected) || h.getWorkoutDate().equals(expected.minusDays(1))) {
+                streak++;
+                expected = h.getWorkoutDate().minusDays(1);
+            } else {
+                break;
+            }
+        }
+        return streak;
     }
 }

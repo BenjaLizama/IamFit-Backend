@@ -9,10 +9,19 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
-import java.util.Map;
+import java.util.Map;import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGeneric(
+            Exception ex, HttpServletRequest request) {
+        log.error("Error no controlado en {}: ", request.getRequestURI(), ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(buildError(
+                500, "SYS_500", "Error interno del servidor.", request.getRequestURI()));
+    }
 
     @ExceptionHandler(RoutineSessionExpiredException.class)
     public ResponseEntity<Map<String, Object>> handleSessionExpired(
@@ -50,14 +59,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneric(
-            Exception ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(buildError(
-                500, "SYS_500",
-                "Error interno del servidor.",
-                request.getRequestURI()));
-    }
 
     private Map<String, Object> buildError(int status, String code,
                                            String message, String path) {
@@ -68,5 +69,49 @@ public class GlobalExceptionHandler {
         body.put("path", path);
         body.put("timestamp", System.currentTimeMillis());
         return body;
+    }
+
+    @ExceptionHandler(WorkoutSessionNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionNotFound(
+            WorkoutSessionNotFoundException ex, HttpServletRequest request) {
+        return ResponseEntity.status(404).body(buildError(
+                404, "WORKOUT_SESSION_NOT_FOUND", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(ExerciseAlreadyCompletedException.class)
+    public ResponseEntity<Map<String, Object>> handleExerciseAlreadyCompleted(
+            ExerciseAlreadyCompletedException ex, HttpServletRequest request) {
+        return ResponseEntity.status(409).body(buildError(
+                409, "EXERCISE_ALREADY_COMPLETED", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(ExerciseNotCompletedException.class)
+    public ResponseEntity<Map<String, Object>> handleExerciseNotCompleted(
+            ExerciseNotCompletedException ex, HttpServletRequest request) {
+        return ResponseEntity.status(409).body(buildError(
+                409, "EXERCISE_NOT_COMPLETED", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(RoutineNotActiveException.class)
+    public ResponseEntity<Map<String, Object>> handleRoutineNotActive(
+            RoutineNotActiveException ex, HttpServletRequest request) {
+        return ResponseEntity.status(409).body(buildError(
+                409, "ROUTINE_NOT_ACTIVE", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(org.springframework.core.convert.ConversionFailedException.class)
+    public ResponseEntity<Map<String, Object>> handleConversionFailed(
+            Exception ex, HttpServletRequest request) {
+        return ResponseEntity.status(400).body(buildError(
+                400, "ERR_VALIDATION_001", "El identificador proporcionado no es valido.",
+                request.getRequestURI()));
+    }
+
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleTypeMismatch(
+            Exception ex, HttpServletRequest request) {
+        return ResponseEntity.status(400).body(buildError(
+                400, "ERR_VALIDATION_001", "El identificador proporcionado no es valido.",
+                request.getRequestURI()));
     }
 }

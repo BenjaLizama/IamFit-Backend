@@ -122,11 +122,12 @@ public class RoutineController {
     @PostMapping("/routines/{routineId}/log")
     public ResponseEntity<WorkoutHistoryDto> logWorkout(
             @PathVariable UUID routineId,
-            @RequestParam(required = false) String notes,
+            @RequestBody(required = false) LogWorkoutRequest request,
             @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaim("userId");
-        return ResponseEntity.ok(
-                routineService.logWorkout(userId, routineId, notes));
+        LogWorkoutRequest safeRequest = request != null
+                ? request : new LogWorkoutRequest(null, null, null, null);
+        return ResponseEntity.ok(routineService.logWorkout(userId, routineId, safeRequest));
     }
 
     @GetMapping("/routines/history")
@@ -226,5 +227,48 @@ public class RoutineController {
             @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaim("userId");
         return ResponseEntity.ok(routineService.getWeeklyWorkoutSummary(userId));
+    }
+
+    @PostMapping("/routines/{routineId}/sessions")
+    public ResponseEntity<WorkoutSessionDto> startSession(
+            @PathVariable UUID routineId,
+            @RequestBody(required = false) StartSessionRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        StartSessionRequest safeRequest = request != null ? request : new StartSessionRequest(null);
+        return ResponseEntity.ok(routineService.startSession(userId, routineId, safeRequest));
+    }
+
+    @PatchMapping("/routines/{routineId}/sessions/{sessionId}/exercises/{exerciseEntryId}/complete")
+    public ResponseEntity<SessionExerciseCompletionDto> completeSessionExercise(
+            @PathVariable UUID routineId,
+            @PathVariable UUID sessionId,
+            @PathVariable UUID exerciseEntryId,
+            @RequestBody(required = false) CompleteSessionExerciseRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        CompleteSessionExerciseRequest safeRequest = request != null
+                ? request : new CompleteSessionExerciseRequest(null, null, null, null);
+        return ResponseEntity.ok(routineService.completeSessionExercise(
+                userId, routineId, sessionId, exerciseEntryId, safeRequest));
+    }
+
+    @PatchMapping("/routines/{routineId}/sessions/{sessionId}/exercises/{exerciseEntryId}/uncomplete")
+    public ResponseEntity<SessionExerciseCompletionDto> uncompleteSessionExercise(
+            @PathVariable UUID routineId,
+            @PathVariable UUID sessionId,
+            @PathVariable UUID exerciseEntryId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.uncompleteSessionExercise(
+                userId, routineId, sessionId, exerciseEntryId));
+    }
+
+    @GetMapping("/routines/{routineId}/progress")
+    public ResponseEntity<RoutineProgressDto> getRoutineProgress(
+            @PathVariable UUID routineId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.getRoutineProgress(userId, routineId));
     }
 }
