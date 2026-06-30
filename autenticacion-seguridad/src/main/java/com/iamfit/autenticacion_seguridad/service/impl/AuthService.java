@@ -69,7 +69,7 @@ public class AuthService implements IAuthService {
                 .orElseThrow(() -> new RoleNotFoundException("Error crítico: ROLE_USER no existe."));
 
         CredentialEntity credential = new CredentialEntity();
-        credential.setEmail(request.register().email());
+        credential.setEmail(request.register().email().toLowerCase().trim());
         credential.setPassword(passwordEncoder.encode(request.register().password()));
         credential.setIsActive(true);
         credential.setRoleList(Set.of(defaultRole));

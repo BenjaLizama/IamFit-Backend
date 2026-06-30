@@ -35,13 +35,7 @@ public class UserProfileGrpcService extends UserProfileGrpcServiceGrpc.UserProfi
             newUser.setHeight(request.getHeight());
             newUser.setWeight(request.getWeight());
             String sexStr = request.getSex();
-
-            if (sexStr.equals("MALE") || sexStr.equals("FEMALE")) {
-                newUser.setSex(SexType.valueOf(sexStr));
-            } else {
-                log.warn("Sexo no reconocido: {}. Aplicando valor por defecto", sexStr);
-                newUser.setSex(SexType.MALE);
-            }
+            newUser.setSex(mapSexType(sexStr));
 
             userRepository.save(newUser);
 
@@ -97,5 +91,16 @@ public class UserProfileGrpcService extends UserProfileGrpcServiceGrpc.UserProfi
         }
 
         responseObserver.onCompleted();
+    }
+    private SexType mapSexType(String sexStr) {
+        if (sexStr == null) return SexType.MALE;
+        return switch (sexStr.toUpperCase().trim()) {
+            case "MALE", "M", "MASCULINO", "HOMBRE" -> SexType.MALE;
+            case "FEMALE", "F", "FEMENINO", "MUJER" -> SexType.FEMALE;
+            default -> {
+                log.warn("Sexo no reconocido: {}. Aplicando MALE por defecto", sexStr);
+                yield SexType.MALE;
+            }
+        };
     }
 }

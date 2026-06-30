@@ -25,7 +25,7 @@ public class PasswordAuthStrategy implements AuthenticationStrategy {
     @Override
     public CredentialEntity authenticate(LoginRequest loginRequest) {
         // 1. Buscar la credencial por el identifier (email en este caso)
-        CredentialEntity credential = credentialRepository.findByEmail(loginRequest.identifier())
+        CredentialEntity credential = credentialRepository.findByEmail(loginRequest.identifier().toLowerCase().trim())
                 .orElseThrow(() -> new BadCredentialsException("Correo o contraseña incorrectos."));
 
         // 2. Validar si la cuenta está activa
