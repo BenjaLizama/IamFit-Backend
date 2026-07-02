@@ -178,7 +178,12 @@
 					<pluginId>grpc-java</pluginId>
 					<!--suppress UnresolvedMavenProperty -->
 					<pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
-				</configuration>
+                    <excludes>
+                        <exclude>com/iamfit/usuarios_perfiles/entity/**</exclude>
+                        <exclude>com/iamfit/usuarios_perfiles/enums/**</exclude>
+                        <exclude>com/iamfit/usuarios_perfiles/config/**</exclude>
+                    </excludes>
+                </configuration>
 				<executions>
 					<execution>
 						<goals>

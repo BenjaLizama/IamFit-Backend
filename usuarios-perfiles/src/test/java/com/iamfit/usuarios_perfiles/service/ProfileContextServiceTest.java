@@ -2,6 +2,7 @@ package com.iamfit.usuarios_perfiles.service;
 
 import com.iamfit.usuarios_perfiles.dto.ProfileContextDTO;
 import com.iamfit.usuarios_perfiles.dto.UserProfileDTO;
+import com.iamfit.usuarios_perfiles.repository.WeightHistoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -22,6 +23,7 @@ class ProfileContextServiceTest {
     // Guardamos las referencias al primer eslabón de la cadena
     private WebClient.RequestHeadersUriSpec alimentacionUriSpec;
     private WebClient.RequestHeadersUriSpec ejerciciosUriSpec;
+    private WeightHistoryRepository weightHistoryRepository; // ← agregar
 
     private ProfileContextService service;
 
@@ -33,6 +35,8 @@ class ProfileContextServiceTest {
         // 1. Instanciamos los clientes base
         alimentacionClient = mock(WebClient.class);
         ejerciciosClient = mock(WebClient.class);
+        weightHistoryRepository = mock(WeightHistoryRepository.class); // ← agregar
+
 
         // 2. Instanciamos los mocks para la parte get()
         alimentacionUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
@@ -45,7 +49,7 @@ class ProfileContextServiceTest {
         when(builder.baseUrl(anyString())).thenReturn(builder);
         when(builder.build()).thenReturn(alimentacionClient, ejerciciosClient);
 
-        service = new ProfileContextService(builder, "http://alimentacion", "http://ejercicios");
+        service = new ProfileContextService(builder, "http://alimentacion", "http://ejercicios",weightHistoryRepository);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
