@@ -34,6 +34,8 @@ class AuthServiceTest {
     @Mock private JwtService jwtService;
     @Mock private AuthStrategyManager authStrategyManager;
     @Mock private SessionService sessionService;
+    @Mock private com.iamfit.autenticacion_seguridad.client.UserProfileClient userProfileClient;
+
 
     @InjectMocks
     private AuthService authService;
