@@ -30,9 +30,28 @@ public class MealPlanResponse {
 
     @Data
     public static class DayMenu {
-        private String desayuno;
-        private String almuerzo;
-        private String cena;
-        private List<String> snacks;
+        // En vez de String, ahora usamos la nueva clase MealInfo
+        private MealInfo desayuno;
+        private MealInfo almuerzo;
+        private MealInfo cena;
+        private List<MealInfo> snacks;
+    }
+
+    @Data
+    public static class MealInfo {
+        @JsonProperty("descripcion")
+        private String descripcion;
+
+        @JsonProperty("calorias")
+        private Double calorias;
+
+        @JsonProperty("proteina")
+        private Double proteina;
+
+        @JsonProperty("carbohidratos")
+        private Double carbohidratos;
+
+        @JsonProperty("grasa")
+        private Double grasa;
     }
 }

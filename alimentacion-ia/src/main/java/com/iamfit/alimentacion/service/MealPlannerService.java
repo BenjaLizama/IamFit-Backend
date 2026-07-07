@@ -30,6 +30,7 @@ public class MealPlannerService {
             Reglas estrictas:
             1. Respeta absolutamente las alergias y disgustos.
             2. Ajusta el valor calórico según el objetivo declarado.
+            3. Para CADA comida (desayuno, almuerzo, cena y snacks), debes incluir obligatoriamente la descripción del plato y el cálculo estimado de calorías, proteínas, carbohidratos y grasas.
             """;
 
     public MealPlanResponse generateMealPlan(UserPreferencesRequest request) {
