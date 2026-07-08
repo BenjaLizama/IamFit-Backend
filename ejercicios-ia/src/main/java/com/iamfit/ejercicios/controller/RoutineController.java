@@ -271,4 +271,21 @@ public class RoutineController {
         String userId = jwt.getClaim("userId");
         return ResponseEntity.ok(routineService.getRoutineProgress(userId, routineId));
     }
+
+    @GetMapping("/routines/{routineId}/sessions/active")
+    public ResponseEntity<WorkoutSessionDto> getActiveSession(
+            @PathVariable UUID routineId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.getActiveSession(userId, routineId));
+    }
+
+    @GetMapping("/routines/{routineId}/sessions/{sessionId}")
+    public ResponseEntity<WorkoutSessionDto> getSession(
+            @PathVariable UUID routineId,
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(routineService.getSession(userId, routineId, sessionId));
+    }
 }
