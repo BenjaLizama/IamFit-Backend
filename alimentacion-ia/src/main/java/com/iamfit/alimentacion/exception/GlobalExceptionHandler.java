@@ -60,15 +60,6 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
-    @ExceptionHandler(MealPlanNotActiveException.class)
-    public ProblemDetail handleNotActive(MealPlanNotActiveException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-        problem.setTitle("Plan de comidas no activo");
-        problem.setProperty("code", "MEAL_PLAN_NOT_ACTIVE");
-        problem.setProperty("timestamp", Instant.now());
-        return problem;
-    }
-
     @ExceptionHandler(MealPlanDayNotFoundException.class)
     public ProblemDetail handleDayNotFound(MealPlanDayNotFoundException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
@@ -87,6 +78,15 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor");
         problem.setTitle("Error inesperado");
         problem.setProperty("code", "SYS_500");
+        problem.setProperty("timestamp", Instant.now());
+        return problem;
+    }
+
+    @ExceptionHandler(MealPlanNotActiveException.class)
+    public ProblemDetail handleNotActive(MealPlanNotActiveException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("No hay plan activo");
+        problem.setProperty("code", "MEAL_PLAN_NOT_ACTIVE");
         problem.setProperty("timestamp", Instant.now());
         return problem;
     }

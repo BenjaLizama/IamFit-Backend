@@ -240,7 +240,7 @@ public class RoutineController {
     }
 
     @PatchMapping("/routines/{routineId}/sessions/{sessionId}/exercises/{exerciseEntryId}/complete")
-    public ResponseEntity<SessionExerciseCompletionDto> completeSessionExercise(
+    public ResponseEntity<WorkoutSessionDto> completeSessionExercise(
             @PathVariable UUID routineId,
             @PathVariable UUID sessionId,
             @PathVariable UUID exerciseEntryId,
@@ -254,7 +254,7 @@ public class RoutineController {
     }
 
     @PatchMapping("/routines/{routineId}/sessions/{sessionId}/exercises/{exerciseEntryId}/uncomplete")
-    public ResponseEntity<SessionExerciseCompletionDto> uncompleteSessionExercise(
+    public ResponseEntity<WorkoutSessionDto> uncompleteSessionExercise(
             @PathVariable UUID routineId,
             @PathVariable UUID sessionId,
             @PathVariable UUID exerciseEntryId,
