@@ -20,7 +20,7 @@ public class JwtService implements IJwtService {
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
 
-    @Value("${jwt.expiration.access-token:900000}") // 15 minutos por defecto en milisegundos.
+    @Value("${jwt.expiration.access-token:3600000}") // 60 minutos por defecto en milisegundos.
     private Long jwtExpiration;
 
     /**
