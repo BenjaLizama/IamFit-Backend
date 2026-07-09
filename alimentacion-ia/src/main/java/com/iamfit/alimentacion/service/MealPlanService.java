@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iamfit.alimentacion.dto.*;
 import com.iamfit.alimentacion.entity.MealPlan;
 import com.iamfit.alimentacion.entity.MealPlan.MealPlanStatus;
+import com.iamfit.alimentacion.exception.MealPlanNotActiveException;
 import com.iamfit.alimentacion.repository.MealPlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,7 +78,8 @@ public class MealPlanService {
     public MealPlanDto getActiveMealPlan(String userId) {
         return mealPlanRepository.findByUserIdAndStatus(userId, MealPlanStatus.ACTIVE)
                 .map(this::toDto)
-                .orElseThrow(() -> new RuntimeException("No hay un plan activo"));
+                .orElseThrow(() -> new MealPlanNotActiveException("No hay un plan activo."));
+
     }
 
     // ─── Activar plan ────────────────────────────────────────────────
@@ -144,13 +146,21 @@ public class MealPlanService {
 
     private MealPlanDto toDto(MealPlan plan) {
         MealPlanResponse menuParsed = null;
+
         if (plan.getMenuJson() != null) {
             try {
-                menuParsed = objectMapper.readValue(plan.getMenuJson(), MealPlanResponse.class);
+                MealPlanResponse.WeekMenu weekMenu =
+                        objectMapper.readValue(plan.getMenuJson(), MealPlanResponse.WeekMenu.class);
+
+                menuParsed = new MealPlanResponse();
+                menuParsed.setObjetivo(plan.getGoal());
+                menuParsed.setMenu(weekMenu);
+                menuParsed.setRecomendacionesNutricionales(plan.getRecommendations());
             } catch (Exception e) {
-                log.warn("No se pudo deserializar menu — id: {}", plan.getId());
+                log.warn("No se pudo deserializar menu — id: {}, error: {}", plan.getId(), e.getMessage());
             }
         }
+
         return MealPlanDto.builder()
                 .id(plan.getId())
                 .title(plan.getTitle())

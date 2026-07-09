@@ -674,7 +674,15 @@ public class RoutineService {
                 .orElseThrow(() -> new RuntimeException("Rutina no encontrada: " + routineId));
 
         if (!Boolean.TRUE.equals(routine.getIsActive())) {
-            throw new RoutineNotActiveException("La rutina no esta activa.");
+            throw new RoutineNotActiveException("La rutina no está activa.");
+        }
+
+        // Si ya hay una sesión en progreso para esta rutina hoy, la retorna
+        Optional<WorkoutSession> existing = workoutSessionRepository
+                .findByRoutineIdAndUserIdAndStatus(routineId, userId, WorkoutSession.SessionStatus.IN_PROGRESS);
+        if (existing.isPresent()) {
+            log.info("Sesión en progreso ya existente — id: {}", existing.get().getId());
+            return buildSessionDto(existing.get());
         }
 
         WorkoutSession session = new WorkoutSession();
@@ -683,29 +691,24 @@ public class RoutineService {
         session.setSessionDate(request.date() != null ? request.date() : java.time.LocalDate.now());
 
         WorkoutSession saved = workoutSessionRepository.save(session);
-        log.info("Sesion de entrenamiento iniciada — id: {}, rutina: {}", saved.getId(), routineId);
+        log.info("Sesión de entrenamiento iniciada — id: {}, rutina: {}", saved.getId(), routineId);
 
-        return WorkoutSessionDto.builder()
-                .sessionId(saved.getId())
-                .routineId(routineId)
-                .status(saved.getStatus())
-                .startedAt(saved.getStartedAt())
-                .build();
+        return buildSessionDto(saved);
     }
 
 // ─── Completar ejercicio dentro de una sesion ────────────────────
 
     @Transactional
-    public SessionExerciseCompletionDto completeSessionExercise(
+    public WorkoutSessionDto completeSessionExercise(
             String userId, UUID routineId, UUID sessionId, UUID exerciseEntryId,
             CompleteSessionExerciseRequest request) {
 
         WorkoutSession session = workoutSessionRepository.findByIdAndUserId(sessionId, userId)
                 .orElseThrow(() -> new WorkoutSessionNotFoundException(
-                        "Sesion de entrenamiento no encontrada: " + sessionId));
+                        "Sesión de entrenamiento no encontrada: " + sessionId));
 
         if (!session.getRoutine().getId().equals(routineId)) {
-            throw new IllegalArgumentException("La sesion no pertenece a esta rutina.");
+            throw new IllegalArgumentException("La sesión no pertenece a esta rutina.");
         }
 
         RoutineExercise re = routineExerciseRepository.findById(exerciseEntryId)
@@ -734,21 +737,18 @@ public class RoutineService {
         workoutSessionExerciseRepository.save(completion);
         log.info("Ejercicio completado — sessionId: {}, exerciseEntryId: {}", sessionId, exerciseEntryId);
 
-        return SessionExerciseCompletionDto.builder()
-                .sessionId(sessionId).exerciseEntryId(exerciseEntryId)
-                .completed(true).completedAt(completion.getCompletedAt())
-                .build();
+        return buildSessionDto(session);
     }
 
 // ─── Deshacer completado de ejercicio ────────────────────────────
 
     @Transactional
-    public SessionExerciseCompletionDto uncompleteSessionExercise(
+    public WorkoutSessionDto uncompleteSessionExercise(
             String userId, UUID routineId, UUID sessionId, UUID exerciseEntryId) {
 
         WorkoutSession session = workoutSessionRepository.findByIdAndUserId(sessionId, userId)
                 .orElseThrow(() -> new WorkoutSessionNotFoundException(
-                        "Sesion de entrenamiento no encontrada: " + sessionId));
+                        "Sesión de entrenamiento no encontrada: " + sessionId));
 
         WorkoutSessionExercise completion = workoutSessionExerciseRepository
                 .findBySessionIdAndRoutineExerciseId(sessionId, exerciseEntryId)
@@ -760,8 +760,7 @@ public class RoutineService {
         completion.setCompletedAt(null);
         workoutSessionExerciseRepository.save(completion);
 
-        return SessionExerciseCompletionDto.builder()
-                .sessionId(sessionId).exerciseEntryId(exerciseEntryId).completed(false).build();
+        return buildSessionDto(session);
     }
 
 // ─── Historial mejorado (reemplaza logWorkout actual) ────────────
@@ -856,5 +855,82 @@ public class RoutineService {
             }
         }
         return streak;
+    }
+
+    @Transactional(readOnly = true)
+    public WorkoutSessionDto buildSessionDto(WorkoutSession session) {
+        List<WorkoutSessionExercise> completions = workoutSessionExerciseRepository
+                .findBySessionId(session.getId());
+
+        Map<UUID, WorkoutSessionExercise> completionMap = completions.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        c -> c.getRoutineExercise().getId(), c -> c));
+
+        List<SessionExerciseDto> exercises = session.getRoutine().getExercises().stream()
+                .map(re -> {
+                    WorkoutSessionExercise comp = completionMap.get(re.getId());
+                    return SessionExerciseDto.builder()
+                            .exerciseEntryId(re.getId())
+                            .exerciseName(re.getExercise().getName())
+                            .muscleGroup(re.getExercise().getMuscleGroup() != null
+                                    ? re.getExercise().getMuscleGroup().name() : null)
+                            .sets(re.getSets())
+                            .reps(re.getReps())
+                            .weightKg(re.getWeightKg())
+                            .restSeconds(re.getRestSeconds())
+                            .orderIndex(re.getOrderIndex())
+                            .completed(comp != null && Boolean.TRUE.equals(comp.getCompleted()))
+                            .setsCompleted(comp != null ? comp.getSetsCompleted() : null)
+                            .repsCompleted(comp != null ? comp.getRepsCompleted() : null)
+                            .weightUsed(comp != null ? comp.getWeightUsed() : null)
+                            .notes(comp != null ? comp.getNotes() : null)
+                            .completedAt(comp != null ? comp.getCompletedAt() : null)
+                            .build();
+                })
+                .sorted(java.util.Comparator.comparing(SessionExerciseDto::getOrderIndex,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .toList();
+
+        long completedCount = exercises.stream()
+                .filter(e -> Boolean.TRUE.equals(e.getCompleted())).count();
+        int total = exercises.size();
+        int percentage = total > 0 ? (int) Math.round((completedCount * 100.0) / total) : 0;
+
+        return WorkoutSessionDto.builder()
+                .sessionId(session.getId())
+                .routineId(session.getRoutine().getId())
+                .routineName(session.getRoutine().getName())
+                .status(session.getStatus())
+                .startedAt(session.getStartedAt())
+                .completedAt(session.getCompletedAt())
+                .totalExercises(total)
+                .completedExercises((int) completedCount)
+                .progressPercentage(percentage)
+                .exercises(exercises)
+                .build();
+    }
+
+    // ─── Obtener sesión activa ────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public WorkoutSessionDto getActiveSession(String userId, UUID routineId) {
+        return workoutSessionRepository
+                .findByRoutineIdAndUserIdAndStatus(routineId, userId, WorkoutSession.SessionStatus.IN_PROGRESS)
+                .map(this::buildSessionDto)
+                .orElseThrow(() -> new WorkoutSessionNotFoundException(
+                        "No hay una sesión activa para esta rutina."));
+    }
+
+// ─── Obtener sesión por ID ────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public WorkoutSessionDto getSession(String userId, UUID routineId, UUID sessionId) {
+        WorkoutSession session = workoutSessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new WorkoutSessionNotFoundException(
+                        "Sesión no encontrada: " + sessionId));
+        if (!session.getRoutine().getId().equals(routineId)) {
+            throw new IllegalArgumentException("La sesión no pertenece a esta rutina.");
+        }
+        return buildSessionDto(session);
     }
 }

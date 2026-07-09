@@ -281,4 +281,12 @@ public class FoodController {
         String userId = jwt.getClaim("userId");
         return ResponseEntity.ok(mealCompletionService.getHistory(userId, from, to));
     }
+
+    @GetMapping("/meal-plans/{planId}/progress")
+    public ResponseEntity<MealPlanProgressResponse> getPlanProgress(
+            @PathVariable UUID planId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaim("userId");
+        return ResponseEntity.ok(mealCompletionService.getPlanProgress(userId, planId));
+    }
 }

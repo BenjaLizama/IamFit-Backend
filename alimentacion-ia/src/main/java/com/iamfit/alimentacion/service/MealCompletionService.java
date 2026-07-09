@@ -122,68 +122,7 @@ public class MealCompletionService {
 
     // ─── Progreso del plan activo ───────────────────────────────────────
 
-    @SuppressWarnings("unchecked")
-    public MealPlanProgressResponse getActivePlanProgress(String userId) {
-        MealPlan plan = mealPlanRepository
-                .findByUserIdAndStatus(userId, MealPlan.MealPlanStatus.ACTIVE)
-                .orElseThrow(() -> new MealPlanNotActiveException("No hay un plan activo."));
 
-        Map<String, Object> menu = parseMenu(plan.getMenuJson());
-        String currentDayKey = WEEK_DAYS.get(LocalDate.now().getDayOfWeek().getValue() - 1);
-
-        LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
-
-        List<MealPlanDayProgress> daysProgress = new ArrayList<>();
-        int totalSlots = 0;
-        int completedSlots = 0;
-
-        for (int i = 0; i < WEEK_DAYS.size(); i++) {
-            String dayKey = WEEK_DAYS.get(i);
-            if (!menu.containsKey(dayKey)) continue;
-
-            Map<String, Object> dayMenu = (Map<String, Object>) menu.get(dayKey);
-            List<String> slots = getSlotsPresent(dayMenu);
-            LocalDate dateForDay = weekStart.plusDays(i);
-
-            List<MealProgressItem> mealItems = new ArrayList<>();
-            boolean allCompleted = !slots.isEmpty();
-            Instant lastCompletedAt = null;
-
-            for (String slot : slots) {
-                totalSlots++;
-                Optional<MealCompletion> completionOpt = mealCompletionRepository
-                        .findByMealPlanIdAndLogDateAndMealType(plan.getId(), dateForDay, slot);
-
-                boolean isCompleted = completionOpt.map(MealCompletion::getCompleted).orElse(false);
-                if (isCompleted) {
-                    completedSlots++;
-                    lastCompletedAt = completionOpt.get().getCompletedAt();
-                } else {
-                    allCompleted = false;
-                }
-
-                mealItems.add(MealProgressItem.builder()
-                        .mealId(slot).mealType(slot)
-                        .title(extractTitle(dayMenu.get(slot)))
-                        .completed(isCompleted)
-                        .completedAt(completionOpt.map(MealCompletion::getCompletedAt).orElse(null))
-                        .build());
-            }
-
-            daysProgress.add(MealPlanDayProgress.builder()
-                    .day(dayKey).completed(allCompleted).completedAt(lastCompletedAt)
-                    .meals(mealItems).build());
-        }
-
-        int progressPercentage = totalSlots > 0
-                ? Math.round((completedSlots * 100f) / totalSlots) : 0;
-
-        return MealPlanProgressResponse.builder()
-                .planId(plan.getId()).name(plan.getTitle()).status(plan.getStatus().name())
-                .currentDay(currentDayKey).progressPercentage(progressPercentage)
-                .days(daysProgress)
-                .build();
-    }
 
     // ─── Historial ───────────────────────────────────────────────────────
 
@@ -295,5 +234,78 @@ public class MealCompletionService {
         c.setDayKey(day);
         c.setMealType(mealType);
         return c;
+    }
+
+    @SuppressWarnings("unchecked")
+    public MealPlanProgressResponse getPlanProgress(String userId, UUID planId) {
+        MealPlan plan = mealPlanRepository.findByIdAndUserId(planId, userId)
+                .orElseThrow(() -> new RuntimeException("Plan no encontrado: " + planId));
+        return buildProgressForPlan(plan, userId);
+    }
+
+    public MealPlanProgressResponse getActivePlanProgress(String userId) {
+        MealPlan plan = mealPlanRepository
+                .findByUserIdAndStatus(userId, MealPlan.MealPlanStatus.ACTIVE)
+                .orElseThrow(() -> new MealPlanNotActiveException("No hay un plan activo."));
+        return buildProgressForPlan(plan, userId);
+    }
+
+    private MealPlanProgressResponse buildProgressForPlan(MealPlan plan, String userId) {
+
+        Map<String, Object> menu = parseMenu(plan.getMenuJson());
+        String currentDayKey = WEEK_DAYS.get(LocalDate.now().getDayOfWeek().getValue() - 1);
+
+        LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+
+        List<MealPlanDayProgress> daysProgress = new ArrayList<>();
+        int totalSlots = 0;
+        int completedSlots = 0;
+
+        for (int i = 0; i < WEEK_DAYS.size(); i++) {
+            String dayKey = WEEK_DAYS.get(i);
+            if (!menu.containsKey(dayKey)) continue;
+
+            Map<String, Object> dayMenu = (Map<String, Object>) menu.get(dayKey);
+            List<String> slots = getSlotsPresent(dayMenu);
+            LocalDate dateForDay = weekStart.plusDays(i);
+
+            List<MealProgressItem> mealItems = new ArrayList<>();
+            boolean allCompleted = !slots.isEmpty();
+            Instant lastCompletedAt = null;
+
+            for (String slot : slots) {
+                totalSlots++;
+                Optional<MealCompletion> completionOpt = mealCompletionRepository
+                        .findByMealPlanIdAndLogDateAndMealType(plan.getId(), dateForDay, slot);
+
+                boolean isCompleted = completionOpt.map(MealCompletion::getCompleted).orElse(false);
+                if (isCompleted) {
+                    completedSlots++;
+                    lastCompletedAt = completionOpt.get().getCompletedAt();
+                } else {
+                    allCompleted = false;
+                }
+
+                mealItems.add(MealProgressItem.builder()
+                        .mealId(slot).mealType(slot)
+                        .title(extractTitle(dayMenu.get(slot)))
+                        .completed(isCompleted)
+                        .completedAt(completionOpt.map(MealCompletion::getCompletedAt).orElse(null))
+                        .build());
+            }
+
+            daysProgress.add(MealPlanDayProgress.builder()
+                    .day(dayKey).completed(allCompleted).completedAt(lastCompletedAt)
+                    .meals(mealItems).build());
+        }
+
+        int progressPercentage = totalSlots > 0
+                ? Math.round((completedSlots * 100f) / totalSlots) : 0;
+
+        return MealPlanProgressResponse.builder()
+                .planId(plan.getId()).name(plan.getTitle()).status(plan.getStatus().name())
+                .currentDay(currentDayKey).progressPercentage(progressPercentage)
+                .days(daysProgress)
+                .build();
     }
 }
